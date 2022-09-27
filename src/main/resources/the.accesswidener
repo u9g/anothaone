@@ -1,3 +1,4 @@
 accessWidener v2 named
 accessible field net/minecraft/client/gui/screen/ingame/GuiContainer theSlot Lnet/minecraft/inventory/slot/Slot;
 accessible method net/minecraft/client/gui/screen/ingame/GuiContainer isMouseOverSlot (Lnet/minecraft/inventory/slot/Slot;II)Z
+accessible method net/minecraft/client/gui/screen/ingame/GuiContainer drawSlot (Lnet/minecraft/inventory/slot/Slot;)V

@@ -37,6 +37,7 @@ import net.minecraft.entity.player.EntityPlayerSP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagByte;
@@ -50,6 +51,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagLong;
 import net.minecraft.nbt.NBTTagShort;
 import net.minecraft.nbt.NBTTagString;
+import net.minecraft.network.packet.c2s.play.C0DPacketCloseWindow;
 import net.minecraft.network.packet.c2s.play.C0EPacketClickWindow;
 import net.minecraft.network.packet.s2c.play.S2DPacketOpenWindow;
 import net.minecraft.network.packet.s2c.play.S2EPacketCloseWindow;
@@ -189,11 +191,11 @@ public class StorageManager {
 	private final AtomicInteger searchId = new AtomicInteger(0);
 
 	public static class StoragePage {
-		public ItemStack[] items = new ItemStack[45];
+		public ItemStack[] items = new ItemStack[54];
 		public ItemStack backpackDisplayStack;
 		public String customTitle;
 		public int rows = -1;
-		public boolean[] shouldDarkenIfNotSelected = new boolean[45];
+		public boolean[] shouldDarkenIfNotSelected = new boolean[54];
 
 		public transient boolean matchesSearch;
 		public transient int searchedId;
@@ -210,9 +212,9 @@ public class StorageManager {
 		);
 
 	public static class StorageConfig {
-		public HashMap<String, StoragePage[]> pages = new HashMap<>();
+		public StoragePage[] pages;
 		public final HashMap<Integer, Integer> displayToStorageIdMap = new HashMap<>();
-		public final HashMap<Integer, Integer> displayToStorageIdMapRender = new HashMap<>();
+		public final HashMap<Integer, Integer> displayToStorageIdMap_TO_RENDER = new HashMap<>();
 	}
 
 	public StorageConfig storageConfig = new StorageConfig();
@@ -222,7 +224,7 @@ public class StorageManager {
 
 	private String lastSearch = "";
 
-	private boolean[] storagePresent = null;
+	private boolean[] storagePresent = {true};
 
 	//TODO: Replace with /storage {id} when hypixel becomes not lazy
 	public int desiredStoragePage = -1;
@@ -233,7 +235,7 @@ public class StorageManager {
 	private boolean shouldRenderStorageOverlayCached = false;
 
 	private static final Pattern WINDOW_REGEX = Pattern.compile(".+ Backpack (?:\u2726 )?\\((\\d+)/(\\d+)\\)");
-	private static final Pattern ECHEST_WINDOW_REGEX = Pattern.compile("Ender Chest \\((\\d+)/(\\d+)\\)");
+	private static final Pattern ECHEST_WINDOW_REGEX = Pattern.compile("Vault (\\d+) / (\\d+)");
 
 	public void loadConfig(File file) {
 		try (
@@ -284,12 +286,12 @@ public class StorageManager {
 	}
 
 	public boolean shouldRenderStorageOverlay(String containerName) {
-		if (!NotEnoughUpdates.INSTANCE.config.storageGUI.enableStorageGUI3) {
+		if (!PrisonsModConfig.INSTANCE.storageGUI.storageGuiEnabled) {
 			shouldRenderStorageOverlayCached = false;
 			return false;
 		}
 
-		if (!NotEnoughUpdates.INSTANCE.hasSkyblockScoreboard()) {
+		if (!PrisonsIntegration.isOnPrisons) {
 			shouldRenderStorageOverlayCached = false;
 			return false;
 		}
@@ -304,7 +306,7 @@ public class StorageManager {
 			return true;
 		}
 
-		shouldRenderStorageOverlayCached = containerName != null && containerName.trim().startsWith("Storage");
+		shouldRenderStorageOverlayCached = containerName != null && PrisonsIntegration.isVaultScreen(containerName);
 		return shouldRenderStorageOverlayCached;
 	}
 
@@ -313,10 +315,13 @@ public class StorageManager {
 	}
 
 	private StoragePage[] getPagesForProfile() {
-		if (!NotEnoughUpdates.INSTANCE.hasSkyblockScoreboard()) return null;
-		if (SBInfo.getInstance().currentProfile == null) return null;
+		if (!PrisonsIntegration.isOnPrisons) return null;
 
-		return storageConfig.pages.computeIfAbsent(SBInfo.getInstance().currentProfile, k -> new StoragePage[27]);
+		if (storageConfig.pages == null) {
+			storageConfig.pages = new StoragePage[27];
+		}
+
+		return storageConfig.pages;
 	}
 
 	public StoragePage getPage(int pageIndex, boolean createPage) {
@@ -376,7 +381,10 @@ public class StorageManager {
 		if (getCurrentPageId() == page) return;
 
 		if (page == 0) {
-			NotEnoughUpdates.INSTANCE.sendChatMessage("/enderchest");
+//			NotEnoughUpdates.INSTANCE.sendChatMessage("/enderchest");
+			// TODO: Fix
+			Minecraft.getMinecraft().getNetHandler().addToSendQueue(new C0DPacketCloseWindow(Minecraft.getMinecraft().thePlayer.openContainer.windowId));
+			Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv 1");;
 		} else if (getCurrentWindowId() != -1 && onStorageMenu) {
 			if (page < 9) {
 				sendMouseClick(getCurrentWindowId(), 9 + page);
@@ -386,7 +394,7 @@ public class StorageManager {
 		} else {
 			boolean onEnderchest = page < MAX_ENDER_CHEST_PAGES && currentStoragePage < MAX_ENDER_CHEST_PAGES;
 			boolean onStorage = page >= MAX_ENDER_CHEST_PAGES && currentStoragePage >= MAX_ENDER_CHEST_PAGES;
-			if (currentStoragePage >= 0 && (onEnderchest || (onStorage))) {
+			if (currentStoragePage >= 0 && (onEnderchest || onStorage)) {
 				int currentPageDisplay = getDisplayIdForStorageId(currentStoragePage);
 				int desiredPageDisplay = getDisplayIdForStorageId(page);
 
@@ -425,7 +433,12 @@ public class StorageManager {
 			storageOpenSwitchMillis = System.currentTimeMillis();
 			desiredStoragePage = page;
 
-			NotEnoughUpdates.INSTANCE.sendChatMessage("/storage " + (desiredStoragePage - 8));
+
+			// Close the previous window [since some plugins require this in order] to open the next window
+			Minecraft.getMinecraft().getNetHandler().addToSendQueue(new C0DPacketCloseWindow(Minecraft.getMinecraft().thePlayer.openContainer.windowId));
+			Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv " + (desiredStoragePage + 1));
+			// TODO: Fix
+			// NotEnoughUpdates.INSTANCE.sendChatMessage("/storage " + (desiredStoragePage + 1));
 		}
 	}
 
@@ -455,7 +468,7 @@ public class StorageManager {
 
 	public int getDisplayIdForStorageIdRender(int storageId) {
 		if (storageId < 0) return -1;
-		for (Map.Entry<Integer, Integer> entry : storageConfig.displayToStorageIdMapRender.entrySet()) {
+		for (Map.Entry<Integer, Integer> entry : storageConfig.displayToStorageIdMap_TO_RENDER.entrySet()) {
 			if (entry.getValue() == storageId) {
 				return entry.getKey();
 			}
@@ -478,7 +491,7 @@ public class StorageManager {
 
 	public void openWindowPacket(S2DPacketOpenWindow packet) {
 		shouldRenderStorageOverlayCached = false;
-		if (!NotEnoughUpdates.INSTANCE.hasSkyblockScoreboard()) return;
+		if (!PrisonsIntegration.isOnPrisons) return;
 
 		String windowTitle = Utils.cleanColour(packet.getWindowTitle().getUnformattedText());
 
@@ -501,7 +514,7 @@ public class StorageManager {
 
 				StoragePage spage = getCurrentPage();
 				if (spage != null) {
-					spage.rows = packet.getSlotCount() / 9 - 1;
+					spage.rows = packet.getSlotCount() / 9;
 				}
 			}
 		} else if (matcherEchest.matches()) {
@@ -515,7 +528,7 @@ public class StorageManager {
 
 				StoragePage spage = getCurrentPage();
 				if (spage != null) {
-					spage.rows = packet.getSlotCount() / 9 - 1;
+					spage.rows = packet.getSlotCount() / 9;
 				}
 			}
 		} else {
@@ -531,7 +544,7 @@ public class StorageManager {
 	}
 
 	public void setSlotPacket(S2FPacketSetSlot packet) {
-		if (!NotEnoughUpdates.INSTANCE.hasSkyblockScoreboard()) return;
+		if (!PrisonsIntegration.isOnPrisons) return;
 		if (getCurrentWindowId() == -1 || getCurrentWindowId() != packet.func_149175_c()) return;
 
 		if (getCurrentPageId() != -1) {
@@ -539,9 +552,13 @@ public class StorageManager {
 
 			int slot = packet.func_149173_d();
 			if (page != null && slot >= 9 && slot < 9 + page.rows * 9) {
-				setItemSlot(packet.func_149173_d() - 9, packet.func_149174_e());
+				setItemSlot(packet.func_149173_d(), packet.func_149174_e());
 			}
-		} else if (onStorageMenu) {
+		}
+		// TODO: Code for checking /storage
+		// https://i.imgur.com/jQYsyiX.png
+		// https://i.imgur.com/vMw0nNk.png
+		/* else if (onStorageMenu) {
 			if (storagePresent == null) {
 				storagePresent = new boolean[27];
 			}
@@ -567,7 +584,7 @@ public class StorageManager {
 				if (changed) {
 					synchronized (storageConfig.displayToStorageIdMap) {
 						storageConfig.displayToStorageIdMap.clear();
-						storageConfig.displayToStorageIdMapRender.clear();
+						storageConfig.displayToStorageIdMap_TO_RENDER.clear();
 						int displayIndex = 0;
 						for (int i = 0; i < storagePresent.length; i++) {
 							if (storagePresent[i]) {
@@ -578,11 +595,11 @@ public class StorageManager {
 									if (page != null) {
 										updateSearchForPage(lastSearch, page);
 										if (page.matchesSearch) {
-											storageConfig.displayToStorageIdMapRender.put(displayIndex++, i);
+											storageConfig.displayToStorageIdMap_TO_RENDER.put(displayIndex++, i);
 										}
 									}
 								} else
-									storageConfig.displayToStorageIdMapRender.put(displayIndex++, i);
+									storageConfig.displayToStorageIdMap_TO_RENDER.put(displayIndex++, i);
 							}
 						}
 					}
@@ -607,7 +624,7 @@ public class StorageManager {
 				if (changed) {
 					synchronized (storageConfig.displayToStorageIdMap) {
 						storageConfig.displayToStorageIdMap.clear();
-						storageConfig.displayToStorageIdMapRender.clear();
+						storageConfig.displayToStorageIdMap_TO_RENDER.clear();
 						int displayIndex = 0;
 						for (int i = 0; i < storagePresent.length; i++) {
 							if (storagePresent[i]) {
@@ -618,17 +635,17 @@ public class StorageManager {
 									if (page != null) {
 										updateSearchForPage(lastSearch, page);
 										if (page.matchesSearch) {
-											storageConfig.displayToStorageIdMapRender.put(displayIndex++, i);
+											storageConfig.displayToStorageIdMap_TO_RENDER.put(displayIndex++, i);
 										}
 									}
 								} else
-									storageConfig.displayToStorageIdMapRender.put(displayIndex++, i);
+									storageConfig.displayToStorageIdMap_TO_RENDER.put(displayIndex++, i);
 							}
 						}
 					}
 				}
 			}
-		}
+		}*/
 	}
 
 	public void updateSearchForPage(String searchStr, StoragePage page) {
@@ -657,7 +674,7 @@ public class StorageManager {
 		}
 
 		for (ItemStack stack : page.items) {
-			if (stack != null && NotEnoughUpdates.INSTANCE.manager.doesStackMatchSearch(stack, searchStr)) {
+			if (stack != null && ExtraUtils.doesStackMatchSearch(stack, searchStr)) {
 				page.matchesSearch = true;
 				return;
 			}
@@ -665,11 +682,23 @@ public class StorageManager {
 		page.matchesSearch = false;
 	}
 
+	private static ItemStack GLASS = new ItemStack(Blocks.STAINED_GLASS_PANE);
+
+	static {
+		GLASS.setDamage(10);
+	}
+
 	public void searchDisplay(String searchStr) {
 		if (storagePresent == null) return;
 
-		synchronized (storageConfig.displayToStorageIdMapRender) {
-			storageConfig.displayToStorageIdMapRender.clear();
+		synchronized (storageConfig.displayToStorageIdMap_TO_RENDER) {
+			storageConfig.displayToStorageIdMap_TO_RENDER.clear();
+			// FIXME: Hack to show second pv page
+			storageConfig.displayToStorageIdMap_TO_RENDER.put(1, 1);
+			if (storageConfig.pages[1] == null) {
+				storageConfig.pages[1] = new StoragePage();
+			}
+
 
 			lastSearch = searchStr;
 			int sid = searchId.incrementAndGet();
@@ -681,10 +710,12 @@ public class StorageManager {
 						if (page.rows > 0) {
 							updateSearchForPage(searchStr, page);
 							if (page.matchesSearch) {
-								storageConfig.displayToStorageIdMapRender.put(displayIndex++, i);
+								storageConfig.displayToStorageIdMap_TO_RENDER.put(displayIndex++, i);
+								getPage(i, true).backpackDisplayStack = GLASS;
 							}
 						} else {
-							storageConfig.displayToStorageIdMapRender.put(displayIndex++, i);
+							storageConfig.displayToStorageIdMap_TO_RENDER.put(displayIndex++, i);
+							getPage(i, true).backpackDisplayStack = GLASS;
 							page.matchesSearch = true;
 							page.searchedId = sid;
 						}
@@ -695,7 +726,7 @@ public class StorageManager {
 	}
 
 	public void setItemsPacket(S30PacketWindowItems packet) {
-		if (!NotEnoughUpdates.INSTANCE.hasSkyblockScoreboard()) return;
+		if (!PrisonsIntegration.isOnPrisons) return;
 		if (getCurrentWindowId() == -1 || getCurrentWindowId() != packet.func_148911_c()) return;
 
 		if (getCurrentPageId() != -1) {
@@ -704,7 +735,7 @@ public class StorageManager {
 			if (page != null) {
 				int max = Math.min(page.rows * 9, packet.getItemStacks().length - 9);
 				for (int i = 0; i < max; i++) {
-					setItemSlot(i, packet.getItemStacks()[i + 9]);
+					setItemSlot(i, packet.getItemStacks()[i]);
 				}
 			}
 
@@ -712,7 +743,7 @@ public class StorageManager {
 	}
 
 	public void clientSendWindowClick(C0EPacketClickWindow packet) {
-		if (!NotEnoughUpdates.INSTANCE.hasSkyblockScoreboard()) return;
+		if (!PrisonsIntegration.isOnPrisons) return;
 		if (getCurrentWindowId() == -1 || getCurrentWindowId() != packet.getWindowId()) return;
 		if (!(Minecraft.getMinecraft().currentScreen instanceof GuiChest)) return;
 		ContainerChest containerChest = (ContainerChest) ((GuiChest) Minecraft.getMinecraft().currentScreen).inventorySlots;
@@ -722,9 +753,8 @@ public class StorageManager {
 			if (page == null) return;
 
 			IInventory inv = containerChest.getLowerChestInventory();
-			int max = Math.min(9 + page.rows * 9, inv.getSizeInventory());
-			for (int i = 9; i < max; i++) {
-				setItemSlot(i - 9, inv.getStackInSlot(i));
+			for (int i = 0; i < inv.getSizeInventory(); i++) {
+				setItemSlot(i, inv.getStackInSlot(i));
 			}
 		}
 	}

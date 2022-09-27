@@ -6,7 +6,10 @@
   "mixins": [
   ],
   "client": [
-    "ExampleMixin"
+    "ClientPlayNetworkHandlerMixin",
+    "GameRendererMixin__GuiScreenEvent_DrawScreenEvent_Pre",
+    "HandledScreenMixin_isMouseOverSlot",
+    "ScreenMixin__GuiScreenEvent_MouseOrKeyboardInputEvent_Pre"
   ],
   "injectors": {
     "defaultRequire": 1

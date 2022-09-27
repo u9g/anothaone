@@ -1,8 +1,13 @@
 package net.fabricmc.example;
 
+import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.OpenGlHelper;
-import com.sun.nio.sctp.NotificationHandler;
+import dev.u9g.configlib.config.ChromaColour;
+import dev.u9g.configlib.config.elements.GuiElement;
+import dev.u9g.configlib.config.elements.GuiElementTextField;
+import dev.u9g.configlib.util.GlScissorStack;
+import dev.u9g.configlib.util.render.BackgroundBlur;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.font.FontRenderer;
@@ -15,6 +20,7 @@ import net.minecraft.client.util.ScaledResolution;
 import net.minecraft.inventory.slot.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.screen.ContainerChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
@@ -38,40 +44,39 @@ public class StorageOverlay extends GuiElement {
 	private static final int CHEST_TOP_OFFSET = 17;
 	private static final int CHEST_SLOT_SIZE = 18;
 	private static final int CHEST_BOTTOM_OFFSET = 215;
-	private static final ResourceLocation[] STORAGE_TEXTURES = new ResourceLocation[4];
+	public static final ResourceLocation[] STORAGE_TEXTURES = new ResourceLocation[4];
 	private static final ResourceLocation STORAGE_ICONS_TEXTURE = new ResourceLocation(
-		"notenoughupdates:storage_gui/storage_icons.png");
+		"prisons:storage_gui/storage_icons.png");
 	private static final ResourceLocation STORAGE_PANE_CTM_TEXTURE = new ResourceLocation(
-		"notenoughupdates:storage_gui/storage_gui_pane_ctm.png");
+		"prisons:storage_gui/storage_gui_pane_ctm.png");
 	private static final ResourceLocation[] LOAD_CIRCLE_SEQ = new ResourceLocation[11];
 	private static final ResourceLocation[] NOT_RICKROLL_SEQ = new ResourceLocation[19];
 	private static final StorageOverlay INSTANCE = new StorageOverlay();
 	private static final String CHROMA_STR = "230:255:255:0:0";
-	private static final ResourceLocation RES_ITEM_GLINT = new ResourceLocation("textures/misc/enchanted_item_glint.png");
 
 	static {
 		for (int i = 0; i < STORAGE_TEXTURES.length; i++) {
-			STORAGE_TEXTURES[i] = new ResourceLocation("notenoughupdates:storage_gui/storage_gui_" + i + ".png");
+			STORAGE_TEXTURES[i] = new ResourceLocation("prisons:storage_gui/storage_gui_" + i + ".png");
 		}
 		for (int i = 0; i < STORAGE_PREVIEW_TEXTURES.length; i++) {
-			STORAGE_PREVIEW_TEXTURES[i] = new ResourceLocation("notenoughupdates:storage_gui/storage_preview_" + i + ".png");
+			STORAGE_PREVIEW_TEXTURES[i] = new ResourceLocation("prisons:storage_gui/storage_preview_" + i + ".png");
 		}
 
 		for (int i = 0; i < NOT_RICKROLL_SEQ.length; i++) {
-			NOT_RICKROLL_SEQ[i] = new ResourceLocation("notenoughupdates:storage_gui/we_do_a_little_rolling/" + i + ".jpg");
+			NOT_RICKROLL_SEQ[i] = new ResourceLocation("prisons:storage_gui/we_do_a_little_rolling/" + i + ".jpg");
 		}
 
-		LOAD_CIRCLE_SEQ[0] = new ResourceLocation("notenoughupdates:loading_circle_seq/1.png");
-		LOAD_CIRCLE_SEQ[1] = new ResourceLocation("notenoughupdates:loading_circle_seq/1.png");
-		LOAD_CIRCLE_SEQ[2] = new ResourceLocation("notenoughupdates:loading_circle_seq/2.png");
+		LOAD_CIRCLE_SEQ[0] = new ResourceLocation("prisons:loading_circle_seq/1.png");
+		LOAD_CIRCLE_SEQ[1] = new ResourceLocation("prisons:loading_circle_seq/1.png");
+		LOAD_CIRCLE_SEQ[2] = new ResourceLocation("prisons:loading_circle_seq/2.png");
 		for (int i = 2; i <= 7; i++) {
-			LOAD_CIRCLE_SEQ[i + 1] = new ResourceLocation("notenoughupdates:loading_circle_seq/" + i + ".png");
+			LOAD_CIRCLE_SEQ[i + 1] = new ResourceLocation("prisons:loading_circle_seq/" + i + ".png");
 		}
-		LOAD_CIRCLE_SEQ[9] = new ResourceLocation("notenoughupdates:loading_circle_seq/7.png");
-		LOAD_CIRCLE_SEQ[10] = new ResourceLocation("notenoughupdates:loading_circle_seq/1.png");
+		LOAD_CIRCLE_SEQ[9] = new ResourceLocation("prisons:loading_circle_seq/7.png");
+		LOAD_CIRCLE_SEQ[10] = new ResourceLocation("prisons:loading_circle_seq/1.png");
 	}
 
-	private final Set<Vector2f> enchantGlintRenderLocations = new HashSet<>();
+	public final Set<Vector2f> enchantGlintRenderLocations = new HashSet<>();
 	private final GuiElementTextField searchBar = new GuiElementTextField("", 88, 10,
 		GuiElementTextField.SCALE_TEXT | GuiElementTextField.DISABLE_BG
 	);
@@ -99,7 +104,7 @@ public class StorageOverlay extends GuiElement {
 	private int desiredHeightMX = -1;
 	private int desiredHeightMY = -1;
 	private boolean dirty = false;
-	private boolean allowTypingInSearchBar = true;
+	public boolean allowTypingInSearchBar = true;
 	private int scrollGrabOffset = -1;
 
 	public static StorageOverlay getInstance() {
@@ -236,15 +241,15 @@ public class StorageOverlay extends GuiElement {
 	public static int getPaneType(ItemStack stack, int index, int[] cache) {
 		if (cache != null && cache[index] != 0) return cache[index];
 
-		if (NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes == 2) {
+		if (PrisonsModConfig.INSTANCE.storageGUI.fancyPanes == 2) {
 			if (cache != null) cache[index] = -1;
 			return -1;
 		}
 
 		if (stack != null &&
-			(stack.getItem() == Item.getItemFromBlock(Blocks.stained_glass_pane) || stack.getItem() == Item.getItemFromBlock(
-				Blocks.glass_pane))) {
-			String internalName = NotEnoughUpdates.INSTANCE.manager.getInternalNameForItem(stack);
+			(stack.getItem() == Item.getItemFromBlock(Blocks.STAINED_GLASS_PANE) || stack.getItem() == Item.getItemFromBlock(Blocks.GLASS_PANE))) {
+			// TODO: fix
+			String internalName = null;//NotEnoughUpdates.INSTANCE.manager.getInternalNameForItem(stack);
 			if (internalName != null) {
 				if (internalName.startsWith("STAINED_GLASS_PANE")) {
 					if (cache != null) cache[index] = stack.getItemDamage() + 1;
@@ -260,12 +265,12 @@ public class StorageOverlay extends GuiElement {
 	}
 
 	private int getMaximumScroll() {
-		synchronized (StorageManager.getInstance().storageConfig.displayToStorageIdMapRender) {
+		synchronized (StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER) {
 
 			int maxH = 0;
 
 			for (int i = 0; i < 3; i++) {
-				int lastDisplayId = StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.size() - 1;
+				int lastDisplayId = StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER.size() - 1;
 				int coords = (int) Math.ceil(lastDisplayId / 3f) * 3 + 1 + i;
 
 				int h = getPageCoords(coords).y + scroll.getValue() - getStorageViewSize() - 14;
@@ -315,11 +320,20 @@ public class StorageOverlay extends GuiElement {
 	}
 
 	private int getStorageViewSize() {
-		return NotEnoughUpdates.INSTANCE.config.storageGUI.storageHeight;
+		return PrisonsModConfig.INSTANCE.storageGUI.storageHeight;
 	}
 
-	private int getScrollBarHeight() {
+	public int getScrollBarHeight() {
 		return getStorageViewSize() - 21;
+	}
+
+	private void createOrClearFrameBuffer(int fw, int fh) {
+		if (framebuffer == null) {
+			framebuffer = new Framebuffer(fw, fh, true);
+		} else if (framebuffer.framebufferWidth != fw || framebuffer.framebufferHeight != fh) {
+			framebuffer.createBindFramebuffer(fw, fh);
+		}
+		framebuffer.framebufferClear();
 	}
 
 	@Override
@@ -338,9 +352,8 @@ public class StorageOverlay extends GuiElement {
 
 		scroll.tick();
 
-		int displayStyle = NotEnoughUpdates.INSTANCE.config.storageGUI.displayStyle;
+		int displayStyle = PrisonsModConfig.INSTANCE.storageGUI.displayStyle;
 		ResourceLocation storageTexture = STORAGE_TEXTURES[displayStyle];
-		ResourceLocation storagePreviewTexture = STORAGE_PREVIEW_TEXTURES[displayStyle];
 		int textColour = 0x404040;
 		int searchTextColour = 0xe0e0e0;
 		if (displayStyle == 2) {
@@ -422,8 +435,11 @@ public class StorageOverlay extends GuiElement {
 		//Gui
 		Minecraft.getMinecraft().getTextureManager().bindTexture(storageTexture);
 		GlStateManager.color(1, 1, 1, 1);
+		// upper lip of storage gui https://i.imgur.com/yQLf3CV.png
 		Utils.drawTexturedRect(0, 0, sizeX, 10, 0, sizeX / 600f, 0, 10 / 400f, GL11.GL_NEAREST);
+		// middle of storage gui: https://i.imgur.com/Lw57V3D.png
 		Utils.drawTexturedRect(0, 10, sizeX, storageViewSize - 20, 0, sizeX / 600f, 10 / 400f, 94 / 400f, GL11.GL_NEAREST);
+		// bottom of storage gui https://i.imgur.com/YnUAMDj.png => https://i.imgur.com/nLX57sp.png
 		Utils.drawTexturedRect(
 			0,
 			storageViewSize - 10,
@@ -436,28 +452,7 @@ public class StorageOverlay extends GuiElement {
 			GL11.GL_NEAREST
 		);
 
-		int maxScroll = getMaximumScroll();
-		if (scroll.getValue() > maxScroll) {
-			scroll.setValue(maxScroll);
-		}
-		if (scroll.getValue() < 0) {
-			scroll.setValue(0);
-		}
-
-		//Scroll bar
-		int scrollBarY = Math.round(getScrollBarHeight() * scroll.getValue() / (float) maxScroll);
-		float uMin = scrollGrabOffset >= 0 ? 12 / 600f : 0;
-		Utils.drawTexturedRect(
-			520,
-			8 + scrollBarY,
-			12,
-			15,
-			uMin,
-			uMin + 12 / 600f,
-			250 / 400f,
-			265 / 400f,
-			GL11.GL_NEAREST
-		);
+		StorageOverlayRenderHelper.drawScrollKnob(getMaximumScroll(), scroll, scrollGrabOffset);
 
 		int currentPage = StorageManager.getInstance().getCurrentPageId();
 
@@ -468,57 +463,26 @@ public class StorageOverlay extends GuiElement {
 		boolean doRenderFramebuffer = false;
 		int startY = getPageCoords(0).y;
 		if (OpenGlHelper.isFramebufferEnabled()) {
-			int h;
-			synchronized (StorageManager.getInstance().storageConfig.displayToStorageIdMapRender) {
-				int lastDisplayId = StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.size() - 1;
-				int coords = (int) Math.ceil(lastDisplayId / 3f) * 3 + 3;
-
-				h = getPageCoords(coords).y + scroll.getValue();
-			}
+			int h = StorageOverlayRenderHelper.heightToRender(scroll);
 			int w = sizeX;
+			markDirty(); // TODO: clearing framebuffer, remove later
 
 			//Render from framebuffer
 			if (framebuffer != null) {
-				GlScissorStack.push(0, guiTop + 3, width, guiTop + 3 + storageViewSize, scaledResolution);
-				GlStateManager.enableDepth();
-				GlStateManager.translate(0, startY, 107.0001f);
-				framebuffer.bindFramebufferTexture();
-
-				GlStateManager.color(1, 1, 1, 1);
-
-				GlStateManager.enableAlpha();
-				GlStateManager.alphaFunc(GL11.GL_GREATER, 0F);
-				Utils.drawTexturedRect(0, 0, w, h, 0, 1, 1, 0, GL11.GL_NEAREST);
-				GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
-
-				renderEnchOverlay(enchantGlintRenderLocations);
-
-				GlStateManager.translate(0, -startY, -107.0001f);
-				GlScissorStack.pop(scaledResolution);
+				StorageOverlayRenderHelper.renderFromFramebuffer(w, h, guiTop, width, storageViewSize, scaledResolution, startY, framebuffer);
 			}
 
 			if (dirty || framebuffer == null) {
 				dirty = false;
-
-				int fw = w * scaledResolution.getScaleFactor();
-				int fh = h * scaledResolution.getScaleFactor();
-
-				if (framebuffer == null) {
-					framebuffer = new Framebuffer(fw, fh, true);
-				} else if (framebuffer.framebufferWidth != fw || framebuffer.framebufferHeight != fh) {
-					framebuffer.createBindFramebuffer(fw, fh);
-				}
-				framebuffer.framebufferClear();
+				createOrClearFrameBuffer(w * scaledResolution.getScaleFactor(), h * scaledResolution.getScaleFactor());
+				// Render to framebuffer
 				framebuffer.bindFramebuffer(true);
-
 				GlStateManager.matrixMode(GL11.GL_PROJECTION);
 				GlStateManager.loadIdentity();
 				GlStateManager.ortho(0.0D, w, h, 0.0D, 1000.0D, 3000.0D);
 				GlStateManager.matrixMode(GL11.GL_MODELVIEW);
-
 				GlStateManager.pushMatrix();
 				GlStateManager.translate(-guiLeft, -guiTop - startY, 0);
-
 				doRenderFramebuffer = true;
 			} else {
 				doItemRender = false;
@@ -527,7 +491,7 @@ public class StorageOverlay extends GuiElement {
 
 		if (doItemRender) {
 			enchantGlintRenderLocations.clear();
-			for (Map.Entry<Integer, Integer> entry : StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.entrySet()) {
+			for (Map.Entry<Integer, Integer> entry : StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER.entrySet()) {
 				int displayId = entry.getKey();
 				int storageId = entry.getValue();
 
@@ -552,7 +516,7 @@ public class StorageOverlay extends GuiElement {
 						ItemStack stack;
 
 						if (storageId == currentPage) {
-							stack = containerChest.getSlot(k + 9).getStack();
+							stack = containerChest.getSlot(k).getStack();
 						} else {
 							stack = page.items[k];
 						}
@@ -596,114 +560,8 @@ public class StorageOverlay extends GuiElement {
 										);
 									}
 
-									/*int[] colours = new int[9];
-
-									for (int xi = -1; xi <= 1; xi++) {
-										for (int yi = -1; yi <= 1; yi++) {
-											List<Integer> indexes = new ArrayList<>();
-											List<Integer> coloursList = new ArrayList<>();
-											coloursList.add(rgb);
-
-											if (xi != 0) {
-												indexes.add(k + xi);
-											}
-											if (yi != 0) {
-												indexes.add(k + yi * 9);
-											}
-											if (xi != 0 && yi != 0) {
-												indexes.add(k + yi * 9 + xi);
-											}
-											for (int index : indexes) {
-												if (index >= 0 && index < rows * 9) {
-													int paneTypeI = getPaneType(page.items[index], index, isPaneCache);
-													if (shouldConnect(paneType, paneTypeI)) {
-														coloursList.add(getRGBFromPane(paneTypeI - 1));
-													}
-												}
-											}
-											Vector4f cv = new Vector4f();
-											for (int colour : coloursList) {
-												float a = (colour >> 24) & 0xFF;
-												float r = (colour >> 16) & 0xFF;
-												float g = (colour >> 8) & 0xFF;
-												float b = colour & 0xFF;
-												cv.x += a / coloursList.size();
-												cv.y += r / coloursList.size();
-												cv.z += g / coloursList.size();
-												cv.w += b / coloursList.size();
-											}
-											int finalCol = (((int) cv.x) << 24) | (((int) cv.y) << 16) | (((int) cv.z) << 8) | ((int) cv.w);
-											colours[(xi + 1) + (yi + 1) * 3] = finalCol;
-										}
-									}
-									int[] colours4 = new int[16];
-
-									for (int x = 0; x < 4; x++) {
-										for (int y = 0; y < 4; y++) {
-											int ya = y < 2 ? y : y - 1;
-											int xa = x < 2 ? x : x - 1;
-											colours4[x + y * 4] = colours[xa + ya * 3];
-										}
-									}
-
-									GlStateManager.pushMatrix();
-									GlStateManager.translate(itemX - 1, itemY - 1, 0);
-									Tessellator tessellator = Tessellator.getInstance();
-									WorldRenderer worldrenderer = tessellator.getWorldRenderer();
-									worldrenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
-									float uMinCTM = startCTMX / 227f;
-									float uMaxCTM = (startCTMX + 18) / 227f;
-									float vMinCTM = startCTMY / 75f;
-									float vMaxCTM = (startCTMY + 18) / 75f;
-									for (int xi = -1; xi <= 1; xi++) {
-										for (int yi = -1; yi <= 1; yi++) {
-											float x = xi == -1 ? 0 : xi == 0 ? 1 : 17;
-											float y = yi == -1 ? 0 : yi == 0 ? 1 : 17;
-											float w = xi == 0 ? 16 : 1;
-											float h = yi == 0 ? 16 : 1;
-
-											int col1 = colours4[(xi + 1) + (yi + 1) * 4];
-											int col2 = colours4[(xi + 2) + (yi + 1) * 4];
-											int col3 = colours4[(xi + 1) + (yi + 2) * 4];
-											int col4 = colours4[(xi + 2) + (yi + 2) * 4];
-
-											worldrenderer
-												.pos(x, y + h, 0.0D)
-												.tex(uMinCTM + (uMaxCTM - uMinCTM) * x / 18f, vMinCTM + (vMaxCTM - vMinCTM) * (y + h) / 18f)
-												.color((col3 >> 16) & 0xFF, (col3 >> 8) & 0xFF, col3 & 0xFF, (col3 >> 24) & 0xFF).endVertex();
-											worldrenderer
-												.pos(x + w, y + h, 0.0D)
-												.tex(
-													uMinCTM + (uMaxCTM - uMinCTM) * (x + w) / 18f,
-													vMinCTM + (vMaxCTM - vMinCTM) * (y + h) / 18f
-												)
-												.color((col4 >> 16) & 0xFF, (col4 >> 8) & 0xFF, col4 & 0xFF, (col4 >> 24) & 0xFF).endVertex();
-											worldrenderer
-												.pos(x + w, y, 0.0D)
-												.tex(uMinCTM + (uMaxCTM - uMinCTM) * (x + w) / 18f, vMinCTM + (vMaxCTM - vMinCTM) * y / 18f)
-												.color((col2 >> 16) & 0xFF, (col2 >> 8) & 0xFF, col2 & 0xFF, (col2 >> 24) & 0xFF).endVertex();
-											worldrenderer
-												.pos(x, y, 0.0D)
-												.tex(uMinCTM + (uMaxCTM - uMinCTM) * x / 18f, vMinCTM + (vMaxCTM - vMinCTM) * y / 18f)
-												.color((col1 >> 16) & 0xFF, (col1 >> 8) & 0xFF, col1 & 0xFF, (col1 >> 24) & 0xFF).endVertex();
-										}
-									}
-									GlStateManager.disableDepth();
-									GlStateManager.color(1, 1, 1, 1);
-									GlStateManager.shadeModel(GL11.GL_SMOOTH);
-									tessellator.draw();
-									GlStateManager.shadeModel(GL11.GL_FLAT);
-									GlStateManager.enableDepth();
-									GlStateManager.popMatrix();*/
-
 									RenderItem itemRender = Minecraft.getMinecraft().getRenderItem();
-									itemRender.renderItemOverlayIntoGUI(
-										Minecraft.getMinecraft().fontRendererObj,
-										stack,
-										itemX,
-										itemY,
-										null
-									);
+									itemRender.renderItemOverlayIntoGUI(Minecraft.getMinecraft().fontRendererObj, stack, itemX, itemY, null);
 									GlStateManager.disableLighting();
 								}
 
@@ -720,26 +578,18 @@ public class StorageOverlay extends GuiElement {
 							GL14.glBlendFuncSeparate(GL11.GL_ONE, GL11.GL_ZERO, GL11.GL_ONE, GL11.GL_ZERO);
 
 							if (storageId == currentPage) {
-								Utils.hasEffectOverride = true;
-								GlStateManager.translate(storageX - 7, storageY - 17 - 18, 0);
-								((AccessorGuiContainer) guiChest).doDrawSlot(containerChest.getSlot(k + 9));
-								GlStateManager.translate(-storageX + 7, -storageY + 17 + 18, 0);
-								Utils.hasEffectOverride = false;
+								StorageOverlayRenderHelper.doItemStackDraw(storageX, storageY, guiChest, containerChest.getSlot(k));
 							} else {
 								Utils.drawItemStackWithoutGlint(stack, itemX, itemY);
 							}
 
 							GL14.glBlendFuncSeparate(770, 771, 1, 0);
 
-							if (stack != null && (stack.hasEffect() || stack.getItem() == Items.enchanted_book)) {
+							if (stack != null && (stack.hasEffect() || stack.getItem() == Items.ENCHANTED_BOOK)) {
 								enchantGlintRenderLocations.add(new Vector2f(itemX, itemY - startY));
 							}
 						} else if (storageId == currentPage) {
-							Utils.hasEffectOverride = true;
-							GlStateManager.translate(storageX - 7, storageY - 17 - 18, 0);
-							((AccessorGuiContainer) guiChest).doDrawSlot(containerChest.getSlot(k + 9));
-							GlStateManager.translate(-storageX + 7, -storageY + 17 + 18, 0);
-							Utils.hasEffectOverride = false;
+							StorageOverlayRenderHelper.doItemStackDraw(storageX, storageY, guiChest, containerChest.getSlot(k));
 						} else {
 							Utils.drawItemStack(stack, itemX, itemY);
 						}
@@ -766,7 +616,7 @@ public class StorageOverlay extends GuiElement {
 		}
 
 		GlScissorStack.push(0, guiTop + 3, width, guiTop + 3 + storageViewSize, scaledResolution);
-		for (Map.Entry<Integer, Integer> entry : StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.entrySet()) {
+		for (Map.Entry<Integer, Integer> entry : StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER.entrySet()) {
 			int displayId = entry.getKey();
 			int storageId = entry.getValue();
 
@@ -778,6 +628,7 @@ public class StorageOverlay extends GuiElement {
 
 			StorageManager.StoragePage page = StorageManager.getInstance().getPage(storageId, false);
 
+			// Draw names of pages
 			if (editingNameId == storageId) {
 				int len = fontRendererObj.getStringWidth(renameStorageField.getTextDisplay()) + 10;
 				renameStorageField.setSize(len, 12);
@@ -981,19 +832,7 @@ public class StorageOverlay extends GuiElement {
 					}
 				}
 
-				Minecraft.getMinecraft().getTextureManager().bindTexture(storageTexture);
-				GlStateManager.color(1, 1, 1, 1);
-				Utils.drawTexturedRect(
-					storageX,
-					storageY,
-					storageW,
-					storageH,
-					0,
-					162 / 600f,
-					265 / 400f,
-					(265 + storageH) / 400f,
-					GL11.GL_NEAREST
-				);
+				StorageOverlayRenderHelper.renderInventoryLines(storageX, storageY, storageW, storageH, rows);
 
 				boolean whiteOverlay = false;
 
@@ -1003,8 +842,9 @@ public class StorageOverlay extends GuiElement {
 					int itemY = storageY + 1 + 18 * (k / 9);
 
 					if (!searchBar.getText().isEmpty()) {
-						if (stack == null || !NotEnoughUpdates.INSTANCE.manager.doesStackMatchSearch(stack, searchBar.getText())) {
+						if (stack == null || !ExtraUtils.doesStackMatchSearch(stack, searchBar.getText())) {
 							GlStateManager.disableDepth();
+//							Gui.drawRect(itemX, itemY, itemX + 16, itemY + 16, 0xffff0000);
 							Gui.drawRect(itemX, itemY, itemX + 16, itemY + 16, 0x80000000);
 							GlStateManager.enableDepth();
 						}
@@ -1014,7 +854,7 @@ public class StorageOverlay extends GuiElement {
 
 					if (mouseInsideStorages && mouseX >= guiLeft + itemX && mouseX < guiLeft + itemX + 18 &&
 						mouseY >= guiTop + itemY && mouseY < guiTop + itemY + 18) {
-						boolean allowHover = NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes != 1 || !hasCaches ||
+						boolean allowHover = PrisonsModConfig.INSTANCE.storageGUI.fancyPanes != 1 || !hasCaches ||
 							isPaneCaches[storageId][k] <= 0;
 
 						if (storageId != StorageManager.getInstance().getCurrentPageId()) {
@@ -1096,36 +936,7 @@ public class StorageOverlay extends GuiElement {
 								}
 							}
 						}
-						int borderColour =
-							ChromaColour.specialToChromaRGB(NotEnoughUpdates.INSTANCE.config.storageGUI.selectedStorageColour);
-						Gui.drawRect(
-							storageX + borderStartX + 1,
-							storageY + borderStartY,
-							storageX + borderStartX,
-							storageY + borderEndY,
-							borderColour
-						); //Left
-						Gui.drawRect(
-							storageX + borderEndX - 1,
-							storageY + borderStartY,
-							storageX + borderEndX,
-							storageY + borderEndY,
-							borderColour
-						); //Right
-						Gui.drawRect(
-							storageX + borderStartX,
-							storageY + borderStartY,
-							storageX + borderEndX,
-							storageY + borderStartY + 1,
-							borderColour
-						); //Top
-						Gui.drawRect(
-							storageX + borderStartX,
-							storageY + borderEndY - 1,
-							storageX + borderEndX,
-							storageY + borderEndY,
-							borderColour
-						); //Bottom
+						StorageOverlayRenderHelper.renderSelectedStorageOutline(storageX, storageY, borderStartX, borderStartY, borderEndX, borderEndY);
 
 						if (allChroma) {
 							ResourceLocation loc;
@@ -1140,7 +951,7 @@ public class StorageOverlay extends GuiElement {
 						}
 					} else {
 						int borderColour =
-							ChromaColour.specialToChromaRGB(NotEnoughUpdates.INSTANCE.config.storageGUI.selectedStorageColour);
+							ChromaColour.specialToChromaRGB(PrisonsModConfig.INSTANCE.storageGUI.selectedStorageColour);
 						Gui.drawRect(storageX + 1, storageY, storageX, storageY + storageH, borderColour); //Left
 						Gui.drawRect(
 							storageX + storageW - 1,
@@ -1253,13 +1064,13 @@ public class StorageOverlay extends GuiElement {
 
 			GlStateManager.pushMatrix();
 			GlStateManager.translate(181 - 8, storageViewSize + 18 - (inventoryStartIndex / 9 * 18 + 31), 0);
-			((AccessorGuiContainer) guiChest).doDrawSlot(containerChest.inventorySlots.get(inventoryStartIndex + i));
+			guiChest.drawSlot(containerChest.inventorySlots.get(inventoryStartIndex + i));
 			GlStateManager.popMatrix();
 
 			if (!searchBar.getText().isEmpty()) {
-				if (playerItems[i] == null || !NotEnoughUpdates.INSTANCE.manager.doesStackMatchSearch(
-					playerItems[i],
-					searchBar.getText()
+				if (playerItems[i] == null || !ExtraUtils.doesStackMatchSearch(
+						playerItems[i],
+						searchBar.getText()
 				)) {
 					GlStateManager.disableDepth();
 					Gui.drawRect(itemX, itemY, itemX + 16, itemY + 16, 0x80000000);
@@ -1268,14 +1079,14 @@ public class StorageOverlay extends GuiElement {
 			}
 
 			if (mouseX >= guiLeft + itemX && mouseX < guiLeft + itemX + 18 && mouseY >= guiTop + itemY &&
-				mouseY < guiTop + itemY + 18) {
+					mouseY < guiTop + itemY + 18) {
 				itemHoverX = itemX;
 				itemHoverY = itemY;
 
 				if (playerItems[i] != null) {
 					tooltipToDisplay = playerItems[i].getTooltip(
-						Minecraft.getMinecraft().thePlayer,
-						Minecraft.getMinecraft().gameSettings.advancedItemTooltips
+							Minecraft.getMinecraft().thePlayer,
+							Minecraft.getMinecraft().gameSettings.advancedItemTooltips
 					);
 				}
 			}
@@ -1283,34 +1094,15 @@ public class StorageOverlay extends GuiElement {
 		for (int i = 0; i < 27; i++) {
 			int itemX = 181 + 18 * (i % 9);
 			int itemY = storageViewSize + 18 + 18 * (i / 9);
+			StorageOverlayRenderHelper.renderInnerInventorySearchGraying(itemX, itemY, i, storageViewSize, containerChest, inventoryStartIndex, playerItems, searchBar);
 
-			//Utils.drawItemStack(playerItems[i+9], itemX, itemY);
-			GlStateManager.pushMatrix();
-			GlStateManager.translate(181 - 8, storageViewSize + 18 - (inventoryStartIndex / 9 * 18 + 31), 0);
-			((AccessorGuiContainer) guiChest).doDrawSlot(containerChest.inventorySlots.get(inventoryStartIndex + 9 + i));
-			GlStateManager.popMatrix();
-
-			if (!searchBar.getText().isEmpty()) {
-				if (playerItems[i + 9] == null || !NotEnoughUpdates.INSTANCE.manager.doesStackMatchSearch(
-					playerItems[i + 9],
-					searchBar.getText()
-				)) {
-					GlStateManager.disableDepth();
-					Gui.drawRect(itemX, itemY, itemX + 16, itemY + 16, 0x80000000);
-					GlStateManager.enableDepth();
-				}
-			}
-
-			if (mouseX >= guiLeft + itemX && mouseX < guiLeft + itemX + 18 && mouseY >= guiTop + itemY &&
-				mouseY < guiTop + itemY + 18) {
+			// Update highlighted item tooltip to render
+			if (mouseX >= guiLeft + itemX && mouseX < guiLeft + itemX + 18 && mouseY >= guiTop + itemY && mouseY < guiTop + itemY + 18) {
 				itemHoverX = itemX;
 				itemHoverY = itemY;
 
 				if (playerItems[i + 9] != null) {
-					tooltipToDisplay = playerItems[i + 9].getTooltip(
-						Minecraft.getMinecraft().thePlayer,
-						Minecraft.getMinecraft().gameSettings.advancedItemTooltips
-					);
+					tooltipToDisplay = playerItems[i + 9].getTooltip(Minecraft.getMinecraft().thePlayer, Minecraft.getMinecraft().gameSettings.advancedItemTooltips);
 				}
 			}
 		}
@@ -1331,7 +1123,7 @@ public class StorageOverlay extends GuiElement {
 					itemHoverY = itemY;
 
 					if (stack != null) {
-						if (NotEnoughUpdates.INSTANCE.config.storageGUI.enderchestPreview) slotPreview = i;
+						if (/*PrisonsModConfig.INSTANCE.storageGUI.enderchestPreview*/true) slotPreview = i;
 						tooltipToDisplay = stack.getTooltip(
 							Minecraft.getMinecraft().thePlayer,
 							Minecraft.getMinecraft().gameSettings.advancedItemTooltips
@@ -1351,7 +1143,7 @@ public class StorageOverlay extends GuiElement {
 					itemHoverY = itemY;
 
 					if (stack != null) {
-						if (NotEnoughUpdates.INSTANCE.config.storageGUI.backpackPreview)
+						if (/*PrisonsModConfig.INSTANCE.storageGUI.backpackPreview*/false)
 							slotPreview = i + StorageManager.MAX_ENDER_CHEST_PAGES;
 						tooltipToDisplay = stack.getTooltip(
 							Minecraft.getMinecraft().thePlayer,
@@ -1380,7 +1172,7 @@ public class StorageOverlay extends GuiElement {
 						mouseY < guiTop + itemY + 18) {
 						itemHoverX = itemX;
 						itemHoverY = itemY;
-						if (NotEnoughUpdates.INSTANCE.config.storageGUI.enderchestPreview) slotPreview = i;
+						if (/*PrisonsModConfig.INSTANCE.storageGUI.enderchestPreview*/true) slotPreview = i;
 						tooltipToDisplay = stack.getTooltip(
 							Minecraft.getMinecraft().thePlayer,
 							Minecraft.getMinecraft().gameSettings.advancedItemTooltips
@@ -1388,6 +1180,7 @@ public class StorageOverlay extends GuiElement {
 					}
 				}
 			}
+			// render backpacks
 			for (int i = 0; i < 18; i++) {
 				StorageManager.StoragePage page = StorageManager.getInstance().getPage(
 					i + StorageManager.MAX_ENDER_CHEST_PAGES,
@@ -1410,7 +1203,7 @@ public class StorageOverlay extends GuiElement {
 						mouseY < guiTop + itemY + 18) {
 						itemHoverX = itemX;
 						itemHoverY = itemY;
-						if (NotEnoughUpdates.INSTANCE.config.storageGUI.backpackPreview)
+						if (/*PrisonsModConfig.INSTANCE.storageGUI.backpackPreview*/false)
 							slotPreview = i + StorageManager.MAX_ENDER_CHEST_PAGES;
 						tooltipToDisplay = stack.getTooltip(
 							Minecraft.getMinecraft().thePlayer,
@@ -1443,27 +1236,27 @@ public class StorageOverlay extends GuiElement {
 
 			switch (i) {
 				case 2:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.displayStyle;
+					vIndex = PrisonsModConfig.INSTANCE.storageGUI.displayStyle;
 					break;
 				case 3:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.backpackPreview ? 1 : 0;
+					vIndex = /*PrisonsModConfig.INSTANCE.storageGUI.backpackPreview*/false ? 1 : 0;
 					break;
 				case 4:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.enderchestPreview ? 1 : 0;
+					vIndex = /*PrisonsModConfig.INSTANCE.storageGUI.enderchestPreview*/true ? 1 : 0;
 					break;
 				case 5:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.masonryMode ? 1 : 0;
+					vIndex = PrisonsModConfig.INSTANCE.storageGUI.compactVertically ? 1 : 0;
 					break;
 				case 6:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes == 2
+					vIndex = PrisonsModConfig.INSTANCE.storageGUI.fancyPanes == 2
 						? 0
-						: NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes + 1;
+						: PrisonsModConfig.INSTANCE.storageGUI.fancyPanes + 1;
 					break;
 				case 7:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.searchBarAutofocus ? 1 : 0;
+					vIndex = PrisonsModConfig.INSTANCE.storageGUI.searchBarAutofocus ? 1 : 0;
 					break;
 				case 8:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.showEnchantGlint ? 1 : 0;
+					/*vIndex = PrisonsModConfig.INSTANCE.storageGUI.showEnchantGlint ? 1 : 0;*/
 					break;
 			}
 
@@ -1492,7 +1285,7 @@ public class StorageOverlay extends GuiElement {
 						break;
 					case 1:
 						int tooltipStorageHeight = desiredHeightSwitch != -1 ? desiredHeightSwitch :
-							NotEnoughUpdates.INSTANCE.config.storageGUI.storageHeight;
+								PrisonsModConfig.INSTANCE.storageGUI.storageHeight;
 						tooltipToDisplay = createTooltip(
 							"Storage View Height",
 							Math.round((tooltipStorageHeight - 104) / 52f),
@@ -1510,7 +1303,7 @@ public class StorageOverlay extends GuiElement {
 					case 2:
 						tooltipToDisplay = createTooltip(
 							"Overlay Style",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.displayStyle,
+								PrisonsModConfig.INSTANCE.storageGUI.displayStyle,
 							"Transparent",
 							"Minecraft",
 							"Dark",
@@ -1520,7 +1313,7 @@ public class StorageOverlay extends GuiElement {
 					case 3:
 						tooltipToDisplay = createTooltip(
 							"Backpack Preview",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.backpackPreview ? 0 : 1,
+								/*PrisonsModConfig.INSTANCE.storageGUI.backpackPreview*/false ? 0 : 1,
 							"On",
 							"Off"
 						);
@@ -1528,7 +1321,7 @@ public class StorageOverlay extends GuiElement {
 					case 4:
 						tooltipToDisplay = createTooltip(
 							"Enderchest Preview",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.enderchestPreview ? 0 : 1,
+								/*PrisonsModConfig.INSTANCE.storageGUI.enderchestPreview*/true ? 0 : 1,
 							"On",
 							"Off"
 						);
@@ -1536,7 +1329,7 @@ public class StorageOverlay extends GuiElement {
 					case 5:
 						tooltipToDisplay = createTooltip(
 							"Compact Vertically",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.masonryMode ? 0 : 1,
+								PrisonsModConfig.INSTANCE.storageGUI.compactVertically ? 0 : 1,
 							"On",
 							"Off"
 						);
@@ -1544,7 +1337,7 @@ public class StorageOverlay extends GuiElement {
 					case 6:
 						tooltipToDisplay = createTooltip(
 							"Fancy Glass Panes",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes,
+								PrisonsModConfig.INSTANCE.storageGUI.fancyPanes,
 							"On",
 							"Locked",
 							"Off"
@@ -1556,7 +1349,7 @@ public class StorageOverlay extends GuiElement {
 					case 7:
 						tooltipToDisplay = createTooltip(
 							"Search Bar Autofocus",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.searchBarAutofocus ? 0 : 1,
+								PrisonsModConfig.INSTANCE.storageGUI.searchBarAutofocus ? 0 : 1,
 							"On",
 							"Off"
 						);
@@ -1564,7 +1357,7 @@ public class StorageOverlay extends GuiElement {
 					case 8:
 						tooltipToDisplay = createTooltip(
 							"Show Enchant Glint",
-							NotEnoughUpdates.INSTANCE.config.storageGUI.showEnchantGlint ? 0 : 1,
+								/*PrisonsModConfig.INSTANCE.storageGUI.showEnchantGlint ? 0 :*/ 1,
 							"On",
 							"Off"
 						);
@@ -1607,65 +1400,7 @@ public class StorageOverlay extends GuiElement {
 		GlStateManager.popMatrix();
 		GlStateManager.translate(0, 0, 300);
 		allowTypingInSearchBar = false;
-		if (stackOnMouse != null) {
-			GlStateManager.enableDepth();
-			if (hoveringOtherBackpack) {
-				Utils.drawItemStack(new ItemStack(Item.getItemFromBlock(Blocks.barrier)), mouseX - 8, mouseY - 8);
-			} else {
-				Utils.drawItemStack(stackOnMouse, mouseX - 8, mouseY - 8);
-			}
-		} else if (slotPreview >= 0) {
-			StorageManager.StoragePage page = StorageManager.getInstance().getPage(slotPreview, false);
-			if (page != null && page.rows > 0) {
-				int rows = page.rows;
-
-				GlStateManager.translate(0, 0, 100);
-				GlStateManager.disableDepth();
-				BackgroundBlur.renderBlurredBackground(7, width, height, mouseX + 2, mouseY + 2, 172, 10 + 18 * rows);
-				Utils.drawGradientRect(mouseX + 2, mouseY + 2, mouseX + 174, mouseY + 12 + 18 * rows, 0xc0101010, 0xd0101010);
-
-				Minecraft.getMinecraft().getTextureManager().bindTexture(storagePreviewTexture);
-				GlStateManager.color(1, 1, 1, 1);
-				Utils.drawTexturedRect(mouseX, mouseY, 176, 7, 0, 1, 0, 7 / 32f, GL11.GL_NEAREST);
-				for (int i = 0; i < rows; i++) {
-					Utils.drawTexturedRect(mouseX, mouseY + 7 + 18 * i, 176, 18, 0, 1, 7 / 32f, 25 / 32f, GL11.GL_NEAREST);
-				}
-				Utils.drawTexturedRect(mouseX, mouseY + 7 + 18 * rows, 176, 7, 0, 1, 25 / 32f, 1, GL11.GL_NEAREST);
-				GlStateManager.enableDepth();
-
-				for (int i = 0; i < rows * 9; i++) {
-					ItemStack stack = page.items[i];
-					if (stack != null) {
-						GlStateManager.enableDepth();
-						Utils.drawItemStack(stack, mouseX + 8 + 18 * (i % 9), mouseY + 8 + 18 * (i / 9));
-						GlStateManager.disableDepth();
-					}
-				}
-				GlStateManager.translate(0, 0, -100);
-			} else {
-				Utils.drawHoveringText(
-					tooltipToDisplay,
-					mouseX,
-					mouseY,
-					width,
-					height,
-					-1,
-					Minecraft.getMinecraft().fontRendererObj
-				);
-			}
-		} else if (tooltipToDisplay != null) {
-			Utils.drawHoveringText(
-				tooltipToDisplay,
-				mouseX,
-				mouseY,
-				width,
-				height,
-				-1,
-				Minecraft.getMinecraft().fontRendererObj
-			);
-		} else {
-			allowTypingInSearchBar = true;
-		}
+		StorageOverlayRenderHelper.drawMouseHovered(stackOnMouse, hoveringOtherBackpack, mouseX, mouseY, slotPreview, width, height, tooltipToDisplay);
 		GlStateManager.translate(0, 0, -300);
 	}
 
@@ -1691,7 +1426,7 @@ public class StorageOverlay extends GuiElement {
 		if (displayId < 0) displayId = 0;
 
 		int y;
-		if (NotEnoughUpdates.INSTANCE.config.storageGUI.masonryMode) {
+		if (PrisonsModConfig.INSTANCE.storageGUI.compactVertically) {
 			y = -scroll.getValue() + 18 + 108 * (displayId / 3);
 		} else {
 			y = -scroll.getValue() + 17 + 104 * (displayId / 3);
@@ -1699,12 +1434,12 @@ public class StorageOverlay extends GuiElement {
 		for (int i = 0; i <= displayId - 3; i += 3) {
 			int maxRows = 1;
 			for (int j = i; j < i + 3; j++) {
-				if (NotEnoughUpdates.INSTANCE.config.storageGUI.masonryMode && displayId % 3 != j % 3) continue;
+				if (PrisonsModConfig.INSTANCE.storageGUI.compactVertically && displayId % 3 != j % 3) continue;
 
-				if (!StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.containsKey(j)) {
+				if (!StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER.containsKey(j)) {
 					continue;
 				}
-				int storageId = StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.get(j);
+				int storageId = StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER.get(j);
 				StorageManager.StoragePage page = StorageManager.getInstance().getPage(storageId, false);
 				if (page == null || page.rows <= 0) {
 					maxRows = Math.max(maxRows, 3);
@@ -1723,8 +1458,7 @@ public class StorageOverlay extends GuiElement {
 		if (!(Minecraft.getMinecraft().currentScreen instanceof GuiChest)) return false;
 
 		int dWheel = Mouse.getEventDWheel();
-		if (!(NotEnoughUpdates.INSTANCE.config.storageGUI.cancelScrollKey != 0 &&
-			KeybindHelper.isKeyDown(NotEnoughUpdates.INSTANCE.config.storageGUI.cancelScrollKey)) && dWheel != 0) {
+		if (/*!(PrisonsModConfig.INSTANCE.storageGUI.cancelScrollKey != 0 && KeybindHelper.isKeyDown(PrisonsModConfig.INSTANCE.storageGUI.cancelScrollKey)) && dWheel != */1==0) {
 			if (dWheel < 0) {
 				dWheel = -1;
 				if (scrollVelocity > 0) scrollVelocity = 0;
@@ -1787,9 +1521,10 @@ public class StorageOverlay extends GuiElement {
 		guiTop = height / 2 - sizeY / 2;
 
 		if (Mouse.getEventButtonState() && !StorageManager.getInstance().onStorageMenu) {
-			if (mouseX > guiLeft + 171 - 36 && mouseX < guiLeft + 171 &&
-				mouseY > guiTop + 41 + storageViewSize && mouseY < guiTop + 41 + storageViewSize + 14) {
-				NotEnoughUpdates.INSTANCE.sendChatMessage("/storage");
+			if (mouseX > guiLeft + 171 - 36 && mouseX < guiLeft + 171 && mouseY > guiTop + 41 + storageViewSize && mouseY < guiTop + 41 + storageViewSize + 14) {
+//				NotEnoughUpdates.INSTANCE.sendChatMessage("/storage");
+				// TODO: Fix
+				Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv 1");
 				searchBar.setFocus(false);
 				return true;
 			}
@@ -1815,8 +1550,7 @@ public class StorageOverlay extends GuiElement {
 			}
 		}
 
-		if (mouseX > guiLeft + 181 && mouseX < guiLeft + 181 + 162 &&
-			mouseY > guiTop + storageViewSize + 18 && mouseY < guiTop + storageViewSize + 94) {
+		if (mouseX > guiLeft + 181 && mouseX < guiLeft + 181 + 162 && mouseY > guiTop + storageViewSize + 18 && mouseY < guiTop + storageViewSize + 94) {
 			if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT))
 				dirty = true;
 			return false;
@@ -1824,7 +1558,7 @@ public class StorageOverlay extends GuiElement {
 
 		if (mouseY > guiTop + 3 && mouseY < guiTop + storageViewSize + 3) {
 			int currentPage = StorageManager.getInstance().getCurrentPageId();
-			for (Map.Entry<Integer, Integer> entry : StorageManager.getInstance().storageConfig.displayToStorageIdMapRender.entrySet()) {
+			for (Map.Entry<Integer, Integer> entry : StorageManager.getInstance().storageConfig.displayToStorageIdMap_TO_RENDER.entrySet()) {
 				IntPair pageCoords = getPageCoords(entry.getKey());
 
 				if (pageCoords.y > storageViewSize + 3 || pageCoords.y + 90 < 3) continue;
@@ -1893,28 +1627,18 @@ public class StorageOverlay extends GuiElement {
 
 			switch (i) {
 				case 2:
-					vIndex = NotEnoughUpdates.INSTANCE.config.storageGUI.displayStyle;
+					vIndex = PrisonsModConfig.INSTANCE.storageGUI.displayStyle;
 					break;
                 /*case 3:
                     vIndex = */
 			}
 
-			Utils.drawTexturedRect(
-				buttonX,
-				buttonY,
-				16,
-				16,
-				minU,
-				maxU,
-				(vIndex * 16) / 256f,
-				(vIndex * 16 + 16) / 256f,
-				GL11.GL_NEAREST
-			);
+			Utils.drawTexturedRect(buttonX, buttonY, 16, 16, minU, maxU, (vIndex * 16) / 256f, (vIndex * 16 + 16) / 256f, GL11.GL_NEAREST);
 		}
 		if (desiredHeightSwitch != -1 && Mouse.getEventButton() == -1 && !Mouse.getEventButtonState()) {
 			int delta = Math.abs(desiredHeightMX - mouseX) + Math.abs(desiredHeightMY - mouseY);
 			if (delta > 3) {
-				NotEnoughUpdates.INSTANCE.config.storageGUI.storageHeight = desiredHeightSwitch;
+				PrisonsModConfig.INSTANCE.storageGUI.storageHeight = desiredHeightSwitch;
 				desiredHeightSwitch = -1;
 			}
 		}
@@ -1930,11 +1654,11 @@ public class StorageOverlay extends GuiElement {
 
 			switch (buttonIndex) {
 				case 0:
-					NotEnoughUpdates.INSTANCE.config.storageGUI.enableStorageGUI3 = false;
+					PrisonsModConfig.INSTANCE.storageGUI.storageGuiEnabled = false;
 					break;
 				case 1:
 					int size =
-						desiredHeightSwitch != -1 ? desiredHeightSwitch : NotEnoughUpdates.INSTANCE.config.storageGUI.storageHeight;
+						desiredHeightSwitch != -1 ? desiredHeightSwitch : PrisonsModConfig.INSTANCE.storageGUI.storageHeight;
 					int sizeIndex = Math.round((size - 104) / 54f);
 					if (Mouse.getEventButton() == 0) {
 						sizeIndex--;
@@ -1949,7 +1673,7 @@ public class StorageOverlay extends GuiElement {
 					desiredHeightSwitch = size;
 					break;
 				case 2:
-					int displayStyle = NotEnoughUpdates.INSTANCE.config.storageGUI.displayStyle;
+					int displayStyle = PrisonsModConfig.INSTANCE.storageGUI.displayStyle;
 					if (Mouse.getEventButton() == 0) {
 						displayStyle++;
 					} else {
@@ -1958,22 +1682,22 @@ public class StorageOverlay extends GuiElement {
 					if (displayStyle < 0) displayStyle = STORAGE_TEXTURES.length - 1;
 					if (displayStyle >= STORAGE_TEXTURES.length) displayStyle = 0;
 
-					NotEnoughUpdates.INSTANCE.config.storageGUI.displayStyle = displayStyle;
+					PrisonsModConfig.INSTANCE.storageGUI.displayStyle = displayStyle;
 					break;
 				case 3:
-					NotEnoughUpdates.INSTANCE.config.storageGUI.backpackPreview =
-						!NotEnoughUpdates.INSTANCE.config.storageGUI.backpackPreview;
+//					PrisonsModConfig.INSTANCE.storageGUI.backpackPreview =
+//						!PrisonsModConfig.INSTANCE.storageGUI.backpackPreview;
 					break;
 				case 4:
-					NotEnoughUpdates.INSTANCE.config.storageGUI.enderchestPreview =
-						!NotEnoughUpdates.INSTANCE.config.storageGUI.enderchestPreview;
+//					PrisonsModConfig.INSTANCE.storageGUI.enderchestPreview =
+//						!PrisonsModConfig.INSTANCE.storageGUI.enderchestPreview;
 					break;
 				case 5:
-					NotEnoughUpdates.INSTANCE.config.storageGUI.masonryMode =
-						!NotEnoughUpdates.INSTANCE.config.storageGUI.masonryMode;
+					PrisonsModConfig.INSTANCE.storageGUI.compactVertically =
+						!PrisonsModConfig.INSTANCE.storageGUI.compactVertically;
 					break;
 				case 6:
-					int fancyPanes = NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes;
+					int fancyPanes = PrisonsModConfig.INSTANCE.storageGUI.fancyPanes;
 					if (Mouse.getEventButton() == 0) {
 						fancyPanes++;
 					} else {
@@ -1982,20 +1706,20 @@ public class StorageOverlay extends GuiElement {
 					if (fancyPanes < 0) fancyPanes = 2;
 					if (fancyPanes >= 3) fancyPanes = 0;
 
-					NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes = fancyPanes;
+					PrisonsModConfig.INSTANCE.storageGUI.fancyPanes = fancyPanes;
 					break;
 				case 7:
-					NotEnoughUpdates.INSTANCE.config.storageGUI.searchBarAutofocus =
-						!NotEnoughUpdates.INSTANCE.config.storageGUI.searchBarAutofocus;
+					PrisonsModConfig.INSTANCE.storageGUI.searchBarAutofocus =
+						!PrisonsModConfig.INSTANCE.storageGUI.searchBarAutofocus;
 					break;
 				case 8:
-					NotEnoughUpdates.INSTANCE.config.storageGUI.showEnchantGlint =
-						!NotEnoughUpdates.INSTANCE.config.storageGUI.showEnchantGlint;
+					/*PrisonsModConfig.INSTANCE.storageGUI.showEnchantGlint =
+						!PrisonsModConfig.INSTANCE.storageGUI.showEnchantGlint;*/
 					break;
 				case 9:
 					throw new NotImplementedException("full neu settings");
 //					ClientCommandHandler.instance.executeCommand(Minecraft.getMinecraft().thePlayer, "/neu storage gui");
-					break;
+//					break;
 			}
 			dirty = true;
 		}
@@ -2049,7 +1773,7 @@ public class StorageOverlay extends GuiElement {
 		if (StorageManager.getInstance().shouldRenderStorageOverlayFast()) {
 			boolean playerInv = slot.inventory == Minecraft.getMinecraft().thePlayer.inventory;
 
-			int slotId = slot.getSlotIndex();
+			int slotId = slot.slotIndex;
 			int storageViewSize = getStorageViewSize();
 
 			if (playerInv) {
@@ -2120,7 +1844,7 @@ public class StorageOverlay extends GuiElement {
 						if (xClicked >= 0 && xClicked <= 8 &&
 							yClicked >= 0 && yClicked <= 5) {
 							if (xClicked + yClicked * 9 + 9 == slotId) {
-								if (NotEnoughUpdates.INSTANCE.config.storageGUI.fancyPanes == 1 && slot.getHasStack() &&
+								if (PrisonsModConfig.INSTANCE.storageGUI.fancyPanes == 1 && slot.getHasStack() &&
 									getPaneType(slot.getStack(), -1, null) > 0) {
 									cir.setReturnValue(false);
 									return;
@@ -2156,8 +1880,8 @@ public class StorageOverlay extends GuiElement {
 		}
 
 		if (Keyboard.getEventKeyState()) {
-			if (NotEnoughUpdates.INSTANCE.config.slotLocking.enableSlotLocking &&
-				KeybindHelper.isKeyPressed(NotEnoughUpdates.INSTANCE.config.slotLocking.slotLockKey) && !searchBar.getFocus()) {
+			if (/*PrisonsModConfig.INSTANCE.slotLocking.enableSlotLocking &&
+				KeybindHelper.isKeyPressed(PrisonsModConfig.INSTANCE.slotLocking.slotLockKey)*/false && !searchBar.getFocus()) {
 				if (!(Minecraft.getMinecraft().currentScreen instanceof GuiContainer)) return true;
 				GuiContainer container = (GuiContainer) Minecraft.getMinecraft().currentScreen;
 
@@ -2170,7 +1894,7 @@ public class StorageOverlay extends GuiElement {
 				for (Slot slot : container.inventorySlots.inventorySlots) {
 					if (slot != null &&
 						slot.inventory == Minecraft.getMinecraft().thePlayer.inventory && container.isMouseOverSlot(slot, mouseX, mouseY)) {
-						SlotLocking.getInstance().toggleLock(slot.slotIndex);
+//						SlotLocking.getInstance().toggleLock(slot.slotIndex);
 						return true;
 					}
 				}
@@ -2193,7 +1917,7 @@ public class StorageOverlay extends GuiElement {
 					}
 				}
 			} else if (searchBar.getFocus() ||
-				(allowTypingInSearchBar && NotEnoughUpdates.INSTANCE.config.storageGUI.searchBarAutofocus)) {
+				(allowTypingInSearchBar && PrisonsModConfig.INSTANCE.storageGUI.searchBarAutofocus)) {
 				String prevText = searchBar.getText();
 				searchBar.setFocus(true);
 				renameStorageField.setFocus(false);
@@ -2202,7 +1926,7 @@ public class StorageOverlay extends GuiElement {
 					StorageManager.getInstance().searchDisplay(searchBar.getText());
 					dirty = true;
 				}
-				if (NotEnoughUpdates.INSTANCE.config.storageGUI.searchBarAutofocus &&
+				if (PrisonsModConfig.INSTANCE.storageGUI.searchBarAutofocus &&
 					searchBar.getText().isEmpty()) {
 					searchBar.setFocus(false);
 				}
@@ -2213,84 +1937,29 @@ public class StorageOverlay extends GuiElement {
 		return true;
 	}
 
-	private void renderEnchOverlay(Set<Vector2f> locations) {
-		float f = (float) (Minecraft.getSystemTime() % 3000L) / 3000.0F / 8.0F;
-		float f1 = (float) (Minecraft.getSystemTime() % 4873L) / 4873.0F / 8.0F;
-		if (NotEnoughUpdates.INSTANCE.config.storageGUI.showEnchantGlint) {
-			Minecraft.getMinecraft().getTextureManager().bindTexture(RES_ITEM_GLINT);
-		}
-
-		GL11.glPushMatrix();
-		for (Vector2f loc : locations) {
-			GlStateManager.pushMatrix();
-			GlStateManager.enableRescaleNormal();
-			GlStateManager.enableAlpha();
-			GlStateManager.alphaFunc(516, 0.1F);
-			GlStateManager.enableBlend();
-
-			GlStateManager.disableLighting();
-
-			GlStateManager.translate(loc.x, loc.y, 0);
-
-			GlStateManager.depthMask(false);
-			GlStateManager.depthFunc(GL11.GL_EQUAL);
-			GlStateManager.blendFunc(GL11.GL_SRC_COLOR, GL11.GL_ONE);
-			GL11.glBlendFunc(GL11.GL_SRC_COLOR, GL11.GL_ONE);
-			GlStateManager.matrixMode(5890);
-			GlStateManager.pushMatrix();
-			GlStateManager.scale(8.0F, 8.0F, 8.0F);
-			GlStateManager.translate(f, 0.0F, 0.0F);
-			GlStateManager.rotate(-50.0F, 0.0F, 0.0F, 1.0F);
-
-			GlStateManager.color(0x80 / 255f, 0x40 / 255f, 0xCC / 255f, 1);
-			Utils.drawTexturedRectNoBlend(0, 0, 16, 16, 0, 1 / 16f, 0, 1 / 16f, GL11.GL_NEAREST);
-
-			GlStateManager.popMatrix();
-			GlStateManager.pushMatrix();
-			GlStateManager.scale(8.0F, 8.0F, 8.0F);
-			GlStateManager.translate(-f1, 0.0F, 0.0F);
-			GlStateManager.rotate(10.0F, 0.0F, 0.0F, 1.0F);
-
-			GlStateManager.color(0x80 / 255f, 0x40 / 255f, 0xCC / 255f, 1);
-			Utils.drawTexturedRectNoBlend(0, 0, 16, 16, 0, 1 / 16f, 0, 1 / 16f, GL11.GL_NEAREST);
-
-			GlStateManager.popMatrix();
-			GlStateManager.matrixMode(5888);
-			GlStateManager.blendFunc(770, 771);
-			GlStateManager.depthFunc(515);
-			GlStateManager.depthMask(true);
-
-			GlStateManager.popMatrix();
-		}
-		GlStateManager.disableRescaleNormal();
-		GL11.glPopMatrix();
-
-		GlStateManager.bindTexture(0);
-	}
-
 	public void fastRenderCheck() {
-		if (!OpenGlHelper.isFramebufferEnabled() && NotEnoughUpdates.INSTANCE.config.notifications.doFastRenderNotif &&
-			NotEnoughUpdates.INSTANCE.config.storageGUI.enableStorageGUI3) {
+		if (!OpenGlHelper.isFramebufferEnabled() && /*PrisonsModConfig.INSTANCE.notifications.doFastRenderNotif*/true &&
+			PrisonsModConfig.INSTANCE.storageGUI.storageGuiEnabled) {
 			this.fastRender = true;
-			NotificationHandler.displayNotification(Lists.newArrayList(
-				"\u00a74Warning",
-				"\u00a77Due to the way fast render and antialiasing work, they're not compatible with NEU.",
-				"\u00a77Please disable fast render and antialiasing in your options under",
-				"\u00a77ESC > Options > Video Settings > Performance > \u00A7cFast Render",
-				"\u00a77ESC > Options > Video Settings > Quality > \u00A7cAntialiasing",
-				"\u00a77This can't be fixed.",
-				"\u00a77",
-				"\u00a77Press X on your keyboard to close this notification"
-			), true, true);
+//			NotificationHandler.displayNotification(Lists.newArrayList(
+//				"\u00a74Warning",
+//				"\u00a77Due to the way fast render and antialiasing work, they're not compatible with NEU.",
+//				"\u00a77Please disable fast render and antialiasing in your options under",
+//				"\u00a77ESC > Options > Video Settings > Performance > \u00A7cFast Render",
+//				"\u00a77ESC > Options > Video Settings > Quality > \u00A7cAntialiasing",
+//				"\u00a77This can't be fixed.",
+//				"\u00a77",
+//				"\u00a77Press X on your keyboard to close this notification"
+//			), true, true);
 			return;
 		}
 
 		this.fastRender = false;
 	}
 
-	private static class IntPair {
-		int x;
-		int y;
+	public static class IntPair {
+		public int x;
+		public int y;
 
 		public IntPair(int x, int y) {
 			this.x = x;

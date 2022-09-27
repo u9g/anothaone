@@ -21,7 +21,11 @@ repositories {
 		url = 'https://maven.glass-launcher.net/babric'
 	}
 
+	maven { url = "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1" }
+
 	mavenLocal()
+
+	maven { url 'https://jitpack.io' }
 }
 
 loom {
@@ -46,6 +50,11 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.legacyfabric:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	modImplementation("dev.u9g:neu-config-lib:1.0.0")
+	implementation "com.github.LlamaLad7:MixinExtras:0.1.0-rc5"
+	annotationProcessor "com.github.LlamaLad7:MixinExtras:0.1.0-rc5"
+	modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:1.1.0")
 
 	// Fabric API provides hooks for events, item registration, and more. As most mods will need this, it's included by default. 
 	// If you know for a fact you don't, it's not required and can be safely removed.

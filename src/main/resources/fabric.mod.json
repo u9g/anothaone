@@ -17,6 +17,9 @@
   "entrypoints": {
     "main": [
       "net.fabricmc.example.ExampleMod"
+    ],
+    "preLaunch": [
+      "net.fabricmc.example.PreLaunch"
     ]
   },
   "accessWidener" : "the.accesswidener",
@@ -25,7 +28,8 @@
   ],
   "depends": {
     "fabricloader": ">=0.12.0",
-    "minecraft": "1.8.9"
+    "minecraft": "1.8.9",
+    "configlib": "1.0.0"
   },
   "suggests": {
     "another-mod": "*"

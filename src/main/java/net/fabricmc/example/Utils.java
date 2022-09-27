@@ -301,7 +301,7 @@ public class Utils {
 		long currentTimeMillis = System.currentTimeMillis();
 		if (startTime == 0) startTime = currentTimeMillis;
 
-		int chromaSpeed = NotEnoughUpdates.INSTANCE.config.misc.chromaSpeed;
+		int chromaSpeed = PrisonsModConfig.INSTANCE.misc.chromaSpeed;
 		if (chromaSpeed < 10) chromaSpeed = 10;
 		if (chromaSpeed > 5000) chromaSpeed = 5000;
 
@@ -539,13 +539,11 @@ public class Utils {
 //	}
 
 	public static Slot getSlotUnderMouse(GuiContainer container) {
-//		container.theSlot
-//		Slot slot = (Slot) getField(GuiContainer.class, container, "theSlot", "field_147006_u");
+		Slot slot = container.theSlot;
 //		if (slot == null) {
 //			slot = SlotLocking.getInstance().getRealSlot();
 //		}
-//		return slot;
-		return null;
+		return slot;
 	}
 
 	public static void drawTexturedRect(float x, float y, float width, float height) {
@@ -720,9 +718,9 @@ public class Utils {
 		return parseRomanNumeral(input);
 	}
 
-	public static void playPressSound() {
-		playSound(new ResourceLocation("gui.button.press"), true);
-	}
+//	public static void playPressSound() {
+//		playSound(new ResourceLocation("gui.button.press"), true);
+//	}
 
 //	public static void playSound(ResourceLocation sound, boolean gui) {
 //		if (NotEnoughUpdates.INSTANCE.config.misc.guiButtonClicks || !gui) {
@@ -1620,11 +1618,11 @@ public class Utils {
 			);
 			//TODO: Coloured Borders
 			int borderColorStart = 0x505000FF;
-			if (NotEnoughUpdates.INSTANCE.config.tooltipTweaks.tooltipBorderColours && coloured) {
+			if (PrisonsModConfig.INSTANCE.toolTips.tooltipBorderColours && coloured) {
 				if (textLines.size() > 0) {
 					String first = textLines.get(0);
 					borderColorStart = getPrimaryColour(first).getRGB() & 0x00FFFFFF |
-						((NotEnoughUpdates.INSTANCE.config.tooltipTweaks.tooltipBorderOpacity) << 24);
+						((PrisonsModConfig.INSTANCE.toolTips.tooltipBorderOpacity) << 24);
 				}
 			}
 			final int borderColorEnd = (borderColorStart & 0xFEFEFE) >> 1 | borderColorStart & 0xFF000000;
