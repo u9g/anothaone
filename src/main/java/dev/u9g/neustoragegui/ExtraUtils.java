@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;

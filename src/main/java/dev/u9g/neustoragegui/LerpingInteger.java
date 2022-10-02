@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 public class LerpingInteger {
 	private int timeSpent;

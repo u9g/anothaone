@@ -1,6 +1,6 @@
-package net.fabricmc.example.mixin;
+package dev.u9g.neustoragegui.mixin;
 
-import net.fabricmc.example.StorageOverlay;
+import dev.u9g.neustoragegui.StorageOverlay;
 import net.minecraft.client.gui.screen.ingame.GuiContainer;
 import net.minecraft.inventory.slot.Slot;
 import org.spongepowered.asm.mixin.Mixin;

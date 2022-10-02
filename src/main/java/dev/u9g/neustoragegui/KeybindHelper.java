@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;

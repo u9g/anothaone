@@ -1,13 +1,15 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "net.fabricmc.example.mixin",
+  "package": "dev.u9g.neustoragegui.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
+    "GuiScreen_sendMessageOverride"
   ],
   "client": [
     "ClientPlayNetworkHandlerMixin",
     "GameRendererMixin__GuiScreenEvent_DrawScreenEvent_Pre",
+    "GuiContainer_WhatTheHellForge",
     "HandledScreenMixin_isMouseOverSlot",
     "ScreenMixin__GuiScreenEvent_MouseOrKeyboardInputEvent_Pre"
   ],

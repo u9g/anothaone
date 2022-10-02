@@ -1,10 +1,9 @@
-package net.fabricmc.example.mixin;
+package dev.u9g.neustoragegui.mixin;
 
 import com.llamalad7.mixinextras.injector.WrapWithCondition;
-import net.fabricmc.example.StorageManager;
-import net.fabricmc.example.StorageOverlay;
+import dev.u9g.neustoragegui.StorageManager;
+import dev.u9g.neustoragegui.StorageOverlay;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screen.GuiScreen;
 import net.minecraft.client.gui.screen.ingame.GuiChest;
 import net.minecraft.client.render.GameRenderer;

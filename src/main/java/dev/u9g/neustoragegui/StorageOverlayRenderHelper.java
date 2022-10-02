@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import dev.u9g.configlib.config.ChromaColour;
@@ -22,7 +22,7 @@ import org.lwjgl.util.vector.Vector2f;
 import java.util.List;
 import java.util.Set;
 
-import static net.fabricmc.example.StorageOverlay.STORAGE_PREVIEW_TEXTURES;
+import static dev.u9g.neustoragegui.StorageOverlay.STORAGE_PREVIEW_TEXTURES;
 
 public class StorageOverlayRenderHelper {
     public static void doItemStackDraw(int storageX, int storageY, GuiChest guiChest, Slot slot) {
@@ -153,7 +153,6 @@ public class StorageOverlayRenderHelper {
         Gui.drawRect( storageX + borderStartX, storageY + borderEndY - 1, storageX + borderEndX, storageY + borderEndY, borderColour); //Bottom
     }
 
-
     public static void drawMouseHovered(ItemStack stackOnMouse, boolean hoveringOtherBackpack, int mouseX, int mouseY, int hoveredPage, int tooltipWidth, int tooltipHeight, List<String> tooltipToDisplay) {
         ResourceLocation storagePreviewTexture = STORAGE_PREVIEW_TEXTURES[PrisonsModConfig.INSTANCE.storageGUI.displayStyle];
         if (stackOnMouse != null) {
@@ -216,9 +215,7 @@ public class StorageOverlayRenderHelper {
         GlStateManager.pushMatrix();
         GlStateManager.translate(181 - 8, storageViewSize + 18 - (inventoryStartIndex / 9 * 18 + 31), 0);
         Slot slot = containerChest.inventorySlots.get(inventoryStartIndex + 9 + slotNum);
-        // TODO: "Fixed" the item rendering by just doing the call myself?
-        // 		 will this cause issues later?
-        if (slot.getHasStack()) Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(slot.getStack(), slot.x, slot.y);
+        if (slot.getHasStack()) Utils.drawItemStack(slot.getStack(), slot.x, slot.y);
         // instead of:
         // guiChest.drawSlot(containerChest.inventorySlots.get(inventoryStartIndex + 9 + slotNum));
         GlStateManager.popMatrix();

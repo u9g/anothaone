@@ -1,18 +1,14 @@
-package net.fabricmc.example.mixin;
+package dev.u9g.neustoragegui.mixin;
 
 import com.llamalad7.mixinextras.injector.WrapWithCondition;
 import dev.u9g.configlib.M;
-import dev.u9g.configlib.config.MyModConfigEditor;
-import dev.u9g.configlib.config.ScreenElementWrapper;
-import net.fabricmc.example.PrisonsModConfig;
-import net.fabricmc.example.StorageManager;
-import net.fabricmc.example.StorageOverlay;
+import dev.u9g.neustoragegui.StorageManager;
+import dev.u9g.neustoragegui.StorageOverlay;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screen.GuiScreen;
 import net.minecraft.client.gui.screen.ingame.GuiChest;
 import net.minecraft.client.util.ScaledResolution;
 import net.minecraft.screen.ContainerChest;
-import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,9 +17,9 @@ import org.spongepowered.asm.mixin.injection.At;
 public class ScreenMixin__GuiScreenEvent_MouseOrKeyboardInputEvent_Pre {
     @WrapWithCondition(at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/GuiScreen;handleMouse()V"), method = "Lnet/minecraft/client/gui/screen/GuiScreen;handleInput()V")
     private boolean shouldHandleMouse(GuiScreen s) {
-        if (Mouse.getEventButtonState() && StorageManager.getInstance().onAnyClick()) {
-            return false;
-        }
+//        if (Mouse.getEventButtonState() && StorageManager.getInstance().onAnyClick()) {
+//            return false;
+//        }
         String containerName = null;
         Gui guiScreen = M.C.currentScreen;
         if (guiScreen instanceof GuiChest) {
@@ -47,9 +43,9 @@ public class ScreenMixin__GuiScreenEvent_MouseOrKeyboardInputEvent_Pre {
 
     @WrapWithCondition(at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/GuiScreen;handleKeyboard()V"), method = "Lnet/minecraft/client/gui/screen/GuiScreen;handleInput()V")
     private boolean shouldHandleKeyboard(GuiScreen s) {
-        if (Mouse.getEventButtonState() && StorageManager.getInstance().onAnyClick()) {
-            return false;
-        }
+//        if (Mouse.getEventButtonState() && StorageManager.getInstance().onAnyClick()) {
+//            return false;
+//        }
         String containerName = null;
         Gui guiScreen = M.C.currentScreen;
         if (guiScreen instanceof GuiChest) {

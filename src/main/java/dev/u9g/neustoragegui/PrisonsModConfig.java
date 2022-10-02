@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import com.google.gson.annotations.Expose;
 import dev.u9g.configlib.config.Config;

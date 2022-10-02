@@ -1,6 +1,6 @@
-package net.fabricmc.example.mixin;
+package dev.u9g.neustoragegui.mixin;
 
-import net.fabricmc.example.StorageManager;
+import dev.u9g.neustoragegui.StorageManager;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.c2s.play.C0EPacketClickWindow;

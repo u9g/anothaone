@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import dev.u9g.configlib.M;
 import dev.u9g.configlib.config.MyModConfigEditor;

@@ -16,15 +16,15 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.fabricmc.example.ExampleMod"
+      "dev.u9g.neustoragegui.ExampleMod"
     ],
     "preLaunch": [
-      "net.fabricmc.example.PreLaunch"
+      "dev.u9g.neustoragegui.PreLaunch"
     ]
   },
   "accessWidener" : "the.accesswidener",
   "mixins": [
-    "modid.mixins.json"
+    "neustoragegui.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.12.0",

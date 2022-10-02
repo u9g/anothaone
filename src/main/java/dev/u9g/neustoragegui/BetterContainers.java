@@ -1,12 +1,9 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
-import com.google.gson.JsonObject;
-import com.mojang.blaze3d.platform.GlStateManager;
 import dev.u9g.configlib.forge.DynamicTexture;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.ingame.GuiChest;
-import net.minecraft.client.texture.TextureManager;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -20,9 +17,6 @@ import net.minecraft.util.ResourceLocation;
 import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 public class BetterContainers {

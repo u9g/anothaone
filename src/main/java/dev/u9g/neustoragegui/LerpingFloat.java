@@ -17,7 +17,7 @@
  * along with NotEnoughUpdates. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 public class LerpingFloat {
 	private int timeSpent;

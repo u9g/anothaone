@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
@@ -33,7 +33,6 @@ import org.lwjgl.util.vector.Vector2f;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.awt.Color;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1001,7 +1000,7 @@ public class StorageOverlay extends GuiElement {
 				}
 
 				if (StorageManager.getInstance().desiredStoragePage == storageId &&
-					StorageManager.getInstance().onStorageMenu) {
+					StorageManager.getInstance().onGeneralVaultsPage) {
 					Utils.drawStringCenteredScaledMaxWidth("Please click again to load...", fontRendererObj,
 						storageX + 81 - 1, storageY + storageH / 2 - 5, false, 150, 0x111111
 					);
@@ -1110,7 +1109,7 @@ public class StorageOverlay extends GuiElement {
 		//Backpack Selector
 		fontRendererObj.drawString("Ender Chest Pages", 9, storageViewSize + 12, textColour);
 		fontRendererObj.drawString("Storage Pages", 9, storageViewSize + 44, textColour);
-		if (StorageManager.getInstance().onStorageMenu) {
+		if (StorageManager.getInstance().onGeneralVaultsPage) {
 			for (int i = 0; i < 9; i++) {
 				int itemX = 10 + i * 18;
 				int itemY = storageViewSize + 24;
@@ -1153,7 +1152,7 @@ public class StorageOverlay extends GuiElement {
 				}
 			}
 		} else {
-			for (int i = 0; i < 9; i++) {
+			for (int i = 0; i < StorageManager.getInstance().numberOfPvs(); i++) {
 				StorageManager.StoragePage page = StorageManager.getInstance().getPage(i, false);
 				int itemX = 10 + (i % 9) * 18;
 				int itemY = storageViewSize + 24 + (i / 9) * 18;
@@ -1181,45 +1180,45 @@ public class StorageOverlay extends GuiElement {
 				}
 			}
 			// render backpacks
-			for (int i = 0; i < 18; i++) {
-				StorageManager.StoragePage page = StorageManager.getInstance().getPage(
-					i + StorageManager.MAX_ENDER_CHEST_PAGES,
-					false
-				);
-				int itemX = 10 + (i % 9) * 18;
-				int itemY = storageViewSize + 56 + (i / 9) * 18;
-
-				ItemStack stack;
-				if (page != null && page.backpackDisplayStack != null) {
-					stack = page.backpackDisplayStack;
-				} else {
-					stack = StorageManager.getInstance().getMissingBackpackStack(i);
-				}
-
-				if (stack != null) {
-					Utils.drawItemStack(stack, itemX, itemY);
-
-					if (mouseX >= guiLeft + itemX && mouseX < guiLeft + itemX + 18 && mouseY >= guiTop + itemY &&
-						mouseY < guiTop + itemY + 18) {
-						itemHoverX = itemX;
-						itemHoverY = itemY;
-						if (/*PrisonsModConfig.INSTANCE.storageGUI.backpackPreview*/false)
-							slotPreview = i + StorageManager.MAX_ENDER_CHEST_PAGES;
-						tooltipToDisplay = stack.getTooltip(
-							Minecraft.getMinecraft().thePlayer,
-							Minecraft.getMinecraft().gameSettings.advancedItemTooltips
-						);
-
-						if (!StorageManager.getInstance().onStorageMenu) {
-							List<String> tooltip = new ArrayList<>();
-							for (String line : tooltipToDisplay) {
-								tooltip.add(line.replace("Right-click to remove", "Click \"Edit\" to manage"));
-							}
-							tooltipToDisplay = tooltip;
-						}
-					}
-				}
-			}
+//			for (int i = 0; i < 18; i++) {
+//				StorageManager.StoragePage page = StorageManager.getInstance().getPage(
+//					i + StorageManager.MAX_ENDER_CHEST_PAGES,
+//					false
+//				);
+//				int itemX = 10 + (i % 9) * 18;
+//				int itemY = storageViewSize + 56 + (i / 9) * 18;
+//
+//				ItemStack stack;
+//				if (page != null && page.backpackDisplayStack != null) {
+//					stack = page.backpackDisplayStack;
+//				} else {
+//					stack = StorageManager.getInstance().getMissingBackpackStack(i);
+//				}
+//
+//				if (stack != null) {
+//					Utils.drawItemStack(stack, itemX, itemY);
+//
+//					if (mouseX >= guiLeft + itemX && mouseX < guiLeft + itemX + 18 && mouseY >= guiTop + itemY &&
+//						mouseY < guiTop + itemY + 18) {
+//						itemHoverX = itemX;
+//						itemHoverY = itemY;
+//						if (/*PrisonsModConfig.INSTANCE.storageGUI.backpackPreview*/false)
+//							slotPreview = i + StorageManager.MAX_ENDER_CHEST_PAGES;
+//						tooltipToDisplay = stack.getTooltip(
+//							Minecraft.getMinecraft().thePlayer,
+//							Minecraft.getMinecraft().gameSettings.advancedItemTooltips
+//						);
+//
+//						if (!StorageManager.getInstance().onGeneralVaultsPage) {
+//							List<String> tooltip = new ArrayList<>();
+//							for (String line : tooltipToDisplay) {
+//								tooltip.add(line.replace("Right-click to remove", "Click \"Edit\" to manage"));
+//							}
+//							tooltipToDisplay = tooltip;
+//						}
+//					}
+//				}
+//			}
 		}
 
 		//Buttons
@@ -1373,7 +1372,7 @@ public class StorageOverlay extends GuiElement {
 			}
 		}
 
-		if (!StorageManager.getInstance().onStorageMenu) {
+		if (!StorageManager.getInstance().onGeneralVaultsPage) {
 			Minecraft.getMinecraft().getTextureManager().bindTexture(storageTexture);
 			GlStateManager.color(1, 1, 1, 1);
 			Utils.drawTexturedRect(
@@ -1458,7 +1457,8 @@ public class StorageOverlay extends GuiElement {
 		if (!(Minecraft.getMinecraft().currentScreen instanceof GuiChest)) return false;
 
 		int dWheel = Mouse.getEventDWheel();
-		if (/*!(PrisonsModConfig.INSTANCE.storageGUI.cancelScrollKey != 0 && KeybindHelper.isKeyDown(PrisonsModConfig.INSTANCE.storageGUI.cancelScrollKey)) && dWheel != */1==0) {
+		// scrolling with scrollwheel
+		if (dWheel != 0) {
 			if (dWheel < 0) {
 				dWheel = -1;
 				if (scrollVelocity > 0) scrollVelocity = 0;
@@ -1520,11 +1520,11 @@ public class StorageOverlay extends GuiElement {
 		guiLeft = width / 2 - (sizeX - searchNobX) / 2;
 		guiTop = height / 2 - sizeY / 2;
 
-		if (Mouse.getEventButtonState() && !StorageManager.getInstance().onStorageMenu) {
+		if (Mouse.getEventButtonState() && !StorageManager.getInstance().onGeneralVaultsPage) {
 			if (mouseX > guiLeft + 171 - 36 && mouseX < guiLeft + 171 && mouseY > guiTop + 41 + storageViewSize && mouseY < guiTop + 41 + storageViewSize + 14) {
 //				NotEnoughUpdates.INSTANCE.sendChatMessage("/storage");
 				// TODO: Fix
-				Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv 1");
+				StorageManager.getInstance().sendToPage(0);
 				searchBar.setFocus(false);
 				return true;
 			}
@@ -1566,15 +1566,16 @@ public class StorageOverlay extends GuiElement {
 				StorageManager.StoragePage page = StorageManager.getInstance().getPage(entry.getValue(), false);
 				int rows = page == null ? 3 : page.rows <= 0 ? 3 : page.rows;
 
+				// page name editing
 				if (page != null) {
 					String pageTitle;
 					if (page.customTitle != null && !page.customTitle.isEmpty()) {
 						pageTitle = page.customTitle;
-					} else if (entry.getValue() < 9) {
+					} else/* if (entry.getValue() < 9)*/ {
 						pageTitle = "Ender Chest Page " + (entry.getValue() + 1);
-					} else {
+					}/* else {
 						pageTitle = "Backpack Slot " + (entry.getValue() - 8);
-					}
+					}*/
 					int titleLen = Minecraft.getMinecraft().fontRendererObj.getStringWidth(pageTitle);
 
 					if (mouseX >= guiLeft + pageCoords.x && mouseX <= guiLeft + pageCoords.x + titleLen + 15 &&
@@ -1598,6 +1599,7 @@ public class StorageOverlay extends GuiElement {
 					}
 				}
 
+				// clicking into a different page
 				if (mouseX > guiLeft + pageCoords.x && mouseX < guiLeft + pageCoords.x + 162 &&
 					mouseY > guiTop + pageCoords.y && mouseY < guiTop + pageCoords.y + rows * 18) {
 					if (currentPage >= 0 && entry.getValue() == currentPage) {
@@ -1616,6 +1618,7 @@ public class StorageOverlay extends GuiElement {
 			}
 		}
 
+		// buttons?
 		for (int i = 0; i < 10; i++) {
 			int buttonX = 388 + (i % 5) * 18;
 			int buttonY = getStorageViewSize() + 35 + (i / 5) * 18;
@@ -1635,6 +1638,7 @@ public class StorageOverlay extends GuiElement {
 
 			Utils.drawTexturedRect(buttonX, buttonY, 16, 16, minU, maxU, (vIndex * 16) / 256f, (vIndex * 16 + 16) / 256f, GL11.GL_NEAREST);
 		}
+		// buttons?
 		if (desiredHeightSwitch != -1 && Mouse.getEventButton() == -1 && !Mouse.getEventButtonState()) {
 			int delta = Math.abs(desiredHeightMX - mouseX) + Math.abs(desiredHeightMY - mouseY);
 			if (delta > 3) {
@@ -1642,6 +1646,7 @@ public class StorageOverlay extends GuiElement {
 				desiredHeightSwitch = -1;
 			}
 		}
+		// buttons?
 		if (Mouse.getEventButtonState() && mouseX >= guiLeft + 388 && mouseX < guiLeft + 388 + 90 &&
 			mouseY >= guiTop + storageViewSize + 35 && mouseY < guiTop + storageViewSize + 35 + 36) {
 			int xN = mouseX - (guiLeft + 388);
@@ -1724,12 +1729,12 @@ public class StorageOverlay extends GuiElement {
 			dirty = true;
 		}
 
-		if (mouseX >= guiLeft + 10 && mouseX <= guiLeft + 171 &&
-			mouseY >= guiTop + storageViewSize + 23 && mouseY <= guiTop + storageViewSize + 91) {
-			if (StorageManager.getInstance().onStorageMenu) {
+		// load new storages
+		if (mouseX >= guiLeft + 10 && mouseX <= guiLeft + 171 && mouseY >= guiTop + storageViewSize + 23 && mouseY <= guiTop + storageViewSize + 91) {
+			if (StorageManager.getInstance().onGeneralVaultsPage) {
 				return false;
 			} else if (Mouse.getEventButtonState() && Mouse.getEventButton() == 0) {
-				for (int i = 0; i < 9; i++) {
+				for (int i = 0; i < StorageManager.getInstance().numberOfPvs(); i++) {
 					int storageId = i;
 					int displayId = StorageManager.getInstance().getDisplayIdForStorageIdRender(i);
 
@@ -1772,39 +1777,14 @@ public class StorageOverlay extends GuiElement {
 	public void overrideIsMouseOverSlot(Slot slot, int mouseX, int mouseY, CallbackInfoReturnable<Boolean> cir) {
 		if (StorageManager.getInstance().shouldRenderStorageOverlayFast()) {
 			boolean playerInv = slot.inventory == Minecraft.getMinecraft().thePlayer.inventory;
-
 			int slotId = slot.slotIndex;
-			int storageViewSize = getStorageViewSize();
-
 			if (playerInv) {
-				if (slotId < 9) {
-					if (mouseY >= guiTop + storageViewSize + 76 && mouseY <= guiTop + storageViewSize + 92) {
-						int xN = mouseX - (guiLeft + 181);
-
-						int xClicked = xN / 18;
-
-						if (xClicked == slotId) {
-							cir.setReturnValue(true);
-							return;
-						}
-					}
-				} else {
-					int xN = mouseX - (guiLeft + 181);
-					int yN = mouseY - (guiTop + storageViewSize + 18);
-
-					int xClicked = xN / 18;
-					int yClicked = yN / 18;
-
-					if (xClicked >= 0 && xClicked <= 8 &&
-						yClicked >= 0 && yClicked <= 2) {
-						if (xClicked + yClicked * 9 + 9 == slotId) {
-							cir.setReturnValue(true);
-							return;
-						}
-					}
+				if (isMouseInPlayersInventory(slot, mouseX, mouseY, cir)) {
+					cir.setReturnValue(true);
+					return;
 				}
 			} else {
-				if (StorageManager.getInstance().onStorageMenu) {
+				/*if (StorageManager.getInstance().onStorageMenu) {
 					if (slotId >= 9 && slotId < 18) {
 						if (mouseY >= guiTop + storageViewSize + 24 && mouseY < guiTop + storageViewSize + 24 + 18) {
 							int xN = mouseX - (guiLeft + 10);
@@ -1829,35 +1809,55 @@ public class StorageOverlay extends GuiElement {
 							return;
 						}
 					}
-				} else {
-					int currentPage = StorageManager.getInstance().getCurrentPageId();
-					int displayId = StorageManager.getInstance().getDisplayIdForStorageIdRender(currentPage);
-					if (displayId >= 0) {
-						IntPair pageCoords = getPageCoords(displayId);
+				} else*/
+				int currentPage = StorageManager.getInstance().getCurrentPageId();
+				int displayId = StorageManager.getInstance().getDisplayIdForStorageIdRender(currentPage);
+				if (displayId >= 0) {
+					IntPair pageCoords = getPageCoords(displayId);
 
-						int xN = mouseX - (guiLeft + pageCoords.x);
-						int yN = mouseY - (guiTop + pageCoords.y);
+					int xN = mouseX - (guiLeft + pageCoords.x);
+					int yN = mouseY - (guiTop + pageCoords.y);
 
-						int xClicked = xN / 18;
-						int yClicked = yN / 18;
+					int xClicked = xN / 18;
+					int yClicked = yN / 18;
 
-						if (xClicked >= 0 && xClicked <= 8 &&
-							yClicked >= 0 && yClicked <= 5) {
-							if (xClicked + yClicked * 9 + 9 == slotId) {
-								if (PrisonsModConfig.INSTANCE.storageGUI.fancyPanes == 1 && slot.getHasStack() &&
-									getPaneType(slot.getStack(), -1, null) > 0) {
-									cir.setReturnValue(false);
-									return;
-								}
-								cir.setReturnValue(true);
+					if (xClicked >= 0 && xClicked <= 8 && yClicked >= 0 && yClicked <= 6) {
+						if (xClicked + yClicked * 9 == slotId) {
+							if (PrisonsModConfig.INSTANCE.storageGUI.fancyPanes == 1 && slot.getHasStack() && getPaneType(slot.getStack(), -1, null) > 0) {
+								cir.setReturnValue(false);
 								return;
 							}
+							cir.setReturnValue(true);
+							return;
 						}
 					}
 				}
 			}
 			cir.setReturnValue(false);
 		}
+	}
+
+	private boolean isMouseInPlayersInventory(Slot slot, int mouseX, int mouseY, CallbackInfoReturnable<Boolean> cir) {
+		int currentWindowSlotSize = StorageManager.getInstance().getCurrentPage().rows * 9;
+		int slotId = slot.slotIndex;
+		int storageViewSize = getStorageViewSize();
+		int xN = mouseX - (guiLeft + 181);
+		int xClicked = xN / 18;
+
+		if (slotId - currentWindowSlotSize - 27 < 9 && slotId - currentWindowSlotSize - 27 >= 0) { // hotbar
+			if (mouseY >= guiTop + storageViewSize + 76 && mouseY <= guiTop + storageViewSize + 92) {
+				return xClicked == slotId - currentWindowSlotSize - 27;
+			}
+		} else { // inner inventory
+			int yN = mouseY - (guiTop + storageViewSize + 18);
+
+			int yClicked = yN / 18;
+
+			if (xClicked >= 0 && xClicked <= 8 && yClicked >= 0 && yClicked <= 2) {
+				return xClicked + yClicked * 9 == slotId - currentWindowSlotSize;
+			}
+		}
+		return false;
 	}
 
 	public void clearSearch() {

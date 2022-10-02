@@ -17,7 +17,7 @@
  * along with NotEnoughUpdates. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -37,7 +37,6 @@ import net.minecraft.entity.player.EntityPlayerSP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagByte;
@@ -70,6 +69,8 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -212,7 +213,7 @@ public class StorageManager {
 		);
 
 	public static class StorageConfig {
-		public StoragePage[] pages;
+		public StoragePage[] pages = new StoragePage[12];
 		public final HashMap<Integer, Integer> displayToStorageIdMap = new HashMap<>();
 		public final HashMap<Integer, Integer> displayToStorageIdMap_TO_RENDER = new HashMap<>();
 	}
@@ -220,7 +221,7 @@ public class StorageManager {
 	public StorageConfig storageConfig = new StorageConfig();
 
 	private int currentStoragePage = -1;
-	public boolean onStorageMenu = false;
+	public boolean onGeneralVaultsPage = false;
 
 	private String lastSearch = "";
 
@@ -250,6 +251,15 @@ public class StorageManager {
 		if (storageConfig == null) {
 			storageConfig = new StorageConfig();
 		}
+	}
+
+	public int numberOfPvs() {
+		int pages = 0;
+		for (StoragePage page : storageConfig.pages) {
+			if (page == null) break;
+			pages++;
+		}
+		return pages;
 	}
 
 	public void saveConfig(File file) {
@@ -306,7 +316,7 @@ public class StorageManager {
 			return true;
 		}
 
-		shouldRenderStorageOverlayCached = containerName != null && PrisonsIntegration.isVaultScreen(containerName);
+		shouldRenderStorageOverlayCached = containerName != null && PrisonsIntegration.isGeneralVaultsScreen(containerName);//PrisonsIntegration.isVaultScreen(containerName);
 		return shouldRenderStorageOverlayCached;
 	}
 
@@ -316,11 +326,6 @@ public class StorageManager {
 
 	private StoragePage[] getPagesForProfile() {
 		if (!PrisonsIntegration.isOnPrisons) return null;
-
-		if (storageConfig.pages == null) {
-			storageConfig.pages = new StoragePage[27];
-		}
-
 		return storageConfig.pages;
 	}
 
@@ -374,6 +379,14 @@ public class StorageManager {
 
 		return chest.inventorySlots.windowId;
 	}
+	private void sendCommandForNewPage(int pvNumber) {
+		Utils.sendNow(new C0DPacketCloseWindow(Minecraft.getMinecraft().thePlayer.openContainer.windowId));
+		Executors.newSingleThreadScheduledExecutor().schedule(() -> {
+			Minecraft.getMinecraft().submit(() -> {
+				Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv " + (pvNumber));
+			});
+		}, 200, TimeUnit.MILLISECONDS);
+	}
 
 	public void sendToPage(int page) {
 		if (desiredStoragePage != getCurrentPageId() &&
@@ -383,60 +396,20 @@ public class StorageManager {
 		if (page == 0) {
 //			NotEnoughUpdates.INSTANCE.sendChatMessage("/enderchest");
 			// TODO: Fix
-			Minecraft.getMinecraft().getNetHandler().addToSendQueue(new C0DPacketCloseWindow(Minecraft.getMinecraft().thePlayer.openContainer.windowId));
-			Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv 1");;
-		} else if (getCurrentWindowId() != -1 && onStorageMenu) {
-			if (page < 9) {
-				sendMouseClick(getCurrentWindowId(), 9 + page);
-			} else {
-				sendMouseClick(getCurrentWindowId(), 27 + page - MAX_ENDER_CHEST_PAGES);
-			}
+			sendCommandForNewPage(1);
+		} else if (getCurrentWindowId() != -1 && onGeneralVaultsPage) {
+			sendCommandForNewPage(desiredStoragePage + 1);
+//			if (page < 9) {
+//				sendMouseClick(getCurrentWindowId(), 9 + page);
+//			} else {
+//				sendMouseClick(getCurrentWindowId(), 27 + page - MAX_ENDER_CHEST_PAGES);
+//			}
 		} else {
-			boolean onEnderchest = page < MAX_ENDER_CHEST_PAGES && currentStoragePage < MAX_ENDER_CHEST_PAGES;
-			boolean onStorage = page >= MAX_ENDER_CHEST_PAGES && currentStoragePage >= MAX_ENDER_CHEST_PAGES;
-			if (currentStoragePage >= 0 && (onEnderchest || onStorage)) {
-				int currentPageDisplay = getDisplayIdForStorageId(currentStoragePage);
-				int desiredPageDisplay = getDisplayIdForStorageId(page);
-
-				if (onEnderchest && desiredPageDisplay > currentPageDisplay) {
-					boolean isLastPage = true;
-					for (int pageN = page + 1; pageN < MAX_ENDER_CHEST_PAGES; pageN++) {
-						if (getDisplayIdForStorageId(pageN) >= 0) {
-							isLastPage = false;
-							break;
-						}
-					}
-					if (isLastPage) {
-						sendMouseClick(getCurrentWindowId(), 8);
-						return;
-					}
-				}
-
-				if (onStorage && page == MAX_ENDER_CHEST_PAGES) {
-					sendMouseClick(getCurrentWindowId(), 5);
-					return;
-				} else if (onStorage && desiredPageDisplay == storageConfig.displayToStorageIdMap.size() - 1) {
-					sendMouseClick(getCurrentWindowId(), 8);
-					return;
-				} else {
-					int delta = desiredPageDisplay - currentPageDisplay;
-					if (delta == -1) {
-						sendMouseClick(getCurrentWindowId(), 6);
-						return;
-					} else if (delta == 1) {
-						sendMouseClick(getCurrentWindowId(), 7);
-						return;
-					}
-				}
-			}
-
 			storageOpenSwitchMillis = System.currentTimeMillis();
 			desiredStoragePage = page;
 
-
 			// Close the previous window [since some plugins require this in order] to open the next window
-			Minecraft.getMinecraft().getNetHandler().addToSendQueue(new C0DPacketCloseWindow(Minecraft.getMinecraft().thePlayer.openContainer.windowId));
-			Minecraft.getMinecraft().thePlayer.sendChatMessage("/pv " + (desiredStoragePage + 1));
+			sendCommandForNewPage(desiredStoragePage + 1);
 			// TODO: Fix
 			// NotEnoughUpdates.INSTANCE.sendChatMessage("/storage " + (desiredStoragePage + 1));
 		}
@@ -476,18 +449,18 @@ public class StorageManager {
 		return -1;
 	}
 
-	public boolean onAnyClick() {
-		if (onStorageMenu && desiredStoragePage >= 0) {
-			if (desiredStoragePage < 9) {
-				sendMouseClick(getCurrentWindowId(), 9 + desiredStoragePage);
-			} else {
-				sendMouseClick(getCurrentWindowId(), 27 + desiredStoragePage - MAX_ENDER_CHEST_PAGES);
-			}
-			desiredStoragePage = -1;
-			return true;
-		}
-		return false;
-	}
+//	public boolean onAnyClick() {
+//		if (onGeneralVaultsPage && desiredStoragePage >= 0) {
+//			if (desiredStoragePage < 9) {
+//				sendMouseClick(getCurrentWindowId(), 9 + desiredStoragePage);
+//			} else {
+//				sendMouseClick(getCurrentWindowId(), 27 + desiredStoragePage - MAX_ENDER_CHEST_PAGES);
+//			}
+//			desiredStoragePage = -1;
+//			return true;
+//		}
+//		return false;
+//	}
 
 	public void openWindowPacket(S2DPacketOpenWindow packet) {
 		shouldRenderStorageOverlayCached = false;
@@ -496,13 +469,12 @@ public class StorageManager {
 		String windowTitle = Utils.cleanColour(packet.getWindowTitle().getUnformattedText());
 
 		Matcher matcher = WINDOW_REGEX.matcher(windowTitle);
-		Matcher matcherEchest = ECHEST_WINDOW_REGEX.matcher(windowTitle);
 
 		currentStoragePage = -1;
-		onStorageMenu = false;
+		onGeneralVaultsPage = false;
 
-		if (windowTitle.trim().equals("Storage")) {
-			onStorageMenu = true;
+		if (PrisonsIntegration.isGeneralVaultsScreen(packet.getWindowTitle().getUnformattedText())) {
+			onGeneralVaultsPage = true;
 		} else if (matcher.matches()) {
 			int page = Integer.parseInt(matcher.group(1));
 
@@ -517,10 +489,10 @@ public class StorageManager {
 					spage.rows = packet.getSlotCount() / 9;
 				}
 			}
-		} else if (matcherEchest.matches()) {
-			int page = Integer.parseInt(matcherEchest.group(1));
+		} else if (PrisonsIntegration.isVaultScreen(packet.getWindowTitle().getUnformattedText())) {
+			int page = PrisonsIntegration.getVaultPageFromName(packet.getWindowTitle().getUnformattedText());
 
-			if (page > 0 && page <= 9) {
+			if (page > 0 && page < 9) {
 				currentStoragePage = page - 1;
 
 				int displayId = getDisplayIdForStorageId(currentStoragePage);
@@ -552,12 +524,23 @@ public class StorageManager {
 
 			int slot = packet.func_149173_d();
 			if (page != null && slot >= 9 && slot < 9 + page.rows * 9) {
+				if (packet.func_149173_d() >= 54) {
+					// System.out.println("trying to write to slot: " + packet.func_149173_d() + " " + packet.func_149174_e());
+					// NOTE: For some reason, we sometimes get a packet for some items in the players inventory
+					return;
+				}
 				setItemSlot(packet.func_149173_d(), packet.func_149174_e());
 			}
 		}
 		// TODO: Code for checking /storage
 		// https://i.imgur.com/jQYsyiX.png
 		// https://i.imgur.com/vMw0nNk.png
+		else if (onGeneralVaultsPage) {
+			System.out.println("huh?");
+//			int slot = packet.func_149173_d();
+//			ItemStack stack = packet.func_149174_e();
+//			System.out.println();
+		}
 		/* else if (onStorageMenu) {
 			if (storagePresent == null) {
 				storagePresent = new boolean[27];
@@ -694,11 +677,13 @@ public class StorageManager {
 		synchronized (storageConfig.displayToStorageIdMap_TO_RENDER) {
 			storageConfig.displayToStorageIdMap_TO_RENDER.clear();
 			// FIXME: Hack to show second pv page
-			storageConfig.displayToStorageIdMap_TO_RENDER.put(1, 1);
-			if (storageConfig.pages[1] == null) {
-				storageConfig.pages[1] = new StoragePage();
-			}
-
+//			for (int i = 0; i <= 9; i++) {
+//				storageConfig.displayToStorageIdMap_TO_RENDER.put(i, i);
+//				if (storageConfig.pages[i] == null) {
+//					storageConfig.pages[i] = new StoragePage();
+//				}
+//			}
+//			getPagesForProfile();//to make sure we have .pages
 
 			lastSearch = searchStr;
 			int sid = searchId.incrementAndGet();
@@ -729,7 +714,19 @@ public class StorageManager {
 		if (!PrisonsIntegration.isOnPrisons) return;
 		if (getCurrentWindowId() == -1 || getCurrentWindowId() != packet.func_148911_c()) return;
 
-		if (getCurrentPageId() != -1) {
+		if (onGeneralVaultsPage) {
+			int maxPvPage = -1;
+			storagePresent = new boolean[27];
+			for (ItemStack item : packet.getItemStacks()) {
+				if (item.getDisplayName().startsWith("§b§lVault §f§l")) {
+					maxPvPage++;
+					if (storageConfig.pages[maxPvPage] == null) {
+						storageConfig.pages[maxPvPage] = new StoragePage();
+					}
+					storagePresent[maxPvPage] = true;
+				}
+			}
+		} else if (getCurrentPageId() != -1) {
 			StoragePage page = getPage(getCurrentPageId(), false);
 
 			if (page != null) {

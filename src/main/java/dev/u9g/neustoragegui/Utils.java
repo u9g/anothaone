@@ -17,17 +17,15 @@
  * along with NotEnoughUpdates. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.fabricmc.example;
+package dev.u9g.neustoragegui;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.sun.nio.sctp.NotificationHandler;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.font.FontRenderer;
@@ -46,13 +44,14 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
+import net.minecraft.network.ClientConnection;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.c2s.play.C0DPacketCloseWindow;
 import net.minecraft.text.ChatComponentText;
 import net.minecraft.text.ChatStyle;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.input.Mouse;
@@ -61,15 +60,9 @@ import org.lwjgl.opengl.GL14;
 import org.lwjgl.util.vector.Matrix4f;
 
 import java.awt.Color;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.nio.FloatBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1993,4 +1986,10 @@ public class Utils {
 //	public static String getLastOpenChestName() {
 //		return SBInfo.getInstance().lastOpenChestName;
 //	}
+
+	public static void sendNow(Packet<?> packet) {
+		ClientConnection conn = Minecraft.getMinecraft().getNetHandler().connection;
+		conn.sendQueuedPackets();
+		conn.sendImmediately(packet, null);
+	}
 }
